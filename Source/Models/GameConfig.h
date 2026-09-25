@@ -54,12 +54,13 @@ struct UtilityConfig {
 	double noveltyPower = 1.0;
 	double repeatPenalty = 0.5;
 	double temperature = 0.5;
-	double minUtility = 0.05;
+	double minUtility = 0.1;
+	double fitFloor = 0.1;  // lets near-certain / near-impossible missions still be served when they are the only fit
 };
 
 struct DirectorConfig {
 	bool enabled = true;
-	int astarMaxExpansions = 4000;
+	int astarMaxExpansions = 300;
 	int rollouts = 96;
 	int simBudgetMs = 12;  // 0 = no time limit (tests)
 	DifficultyConfig difficulty;

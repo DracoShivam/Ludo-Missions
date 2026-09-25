@@ -8,5 +8,6 @@ file(GLOB_RECURSE LM_LOGIC_SRC CONFIGURE_DEPENDS
      ${SRC_ROOT}/Models/*.cpp ${SRC_ROOT}/Controllers/Logic/*.cpp ${SRC_ROOT}/Utils/*.cpp)
 add_executable(lm_tests ${LM_TEST_SRC} ${LM_LOGIC_SRC})
 target_include_directories(lm_tests PRIVATE ${SRC_ROOT} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../axmol/3rdparty)
+target_compile_definitions(lm_tests PRIVATE LM_TEST_CONTENT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../Content/")
 enable_testing()
 add_test(NAME lm_tests COMMAND lm_tests)

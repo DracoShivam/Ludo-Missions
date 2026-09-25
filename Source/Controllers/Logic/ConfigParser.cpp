@@ -85,6 +85,7 @@ ConfigParseResult parseGameConfig(const std::string& jsonText) {
 			x.repeatPenalty = json::getDouble(*u, "repeatPenalty", x.repeatPenalty);
 			x.temperature = json::getDouble(*u, "temperature", x.temperature);
 			x.minUtility = json::getDouble(*u, "minUtility", x.minUtility);
+			x.fitFloor = json::getDouble(*u, "fitFloor", x.fitFloor);
 		}
 	}
 	if (auto* g = json::getObject(doc, "debug")) {

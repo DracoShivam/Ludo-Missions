@@ -42,3 +42,37 @@ inline bool contains(const std::vector<GameEvent>& evs, GameEventType t) {
 }
 
 }  // namespace lm::test
+
+#include <fstream>
+#include <sstream>
+#include <string>
+
+namespace lm::test {
+
+inline std::string readContent(const std::string& rel) {
+	std::ifstream in(std::string(LM_TEST_CONTENT_DIR) + rel);
+	std::stringstream ss;
+	ss << in.rdbuf();
+	return ss.str();
+}
+
+inline GameEvent ev(GameEventType t, int player = 0) {
+	GameEvent e;
+	e.type = t;
+	e.player = player;
+	return e;
+}
+inline GameEvent rolled(int player, int value) {
+	GameEvent e = ev(GameEventType::DICE_ROLLED, player);
+	e.value = value;
+	return e;
+}
+inline GameEvent captured(int by, int victim) {
+	GameEvent e = ev(GameEventType::TOKEN_CAPTURED, by);
+	e.token = 0;
+	e.victimPlayer = victim;
+	e.victimToken = 0;
+	return e;
+}
+
+}  // namespace lm::test
