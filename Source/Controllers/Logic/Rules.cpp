@@ -9,11 +9,15 @@ namespace lm {
 namespace rules {
 
 int targetProgress(int from, int value) {
-	if (value < 1 || value > 6) {
+	// The upper bound is MAX_ROLL_VALUE, not 6, because a power may boost a throw past a die face.
+	// The real constraint is unchanged and sits below: the destination must not overshoot the centre.
+	if (value < 1 || value > MAX_ROLL_VALUE) {
 		return INVALID_PROGRESS;
 	}
 	if (from == IN_YARD) {
-		return value == 6 ? 0 : INVALID_PROGRESS;
+		// Six or better unlocks. Requiring exactly 6 would mean a boosted 9 could not open a token,
+		// turning "+3" into a trap on the one roll a player most wants it to help with.
+		return value >= 6 ? 0 : INVALID_PROGRESS;
 	}
 	if (from >= FINISHED) {
 		return INVALID_PROGRESS;
@@ -31,17 +35,30 @@ std::optional<std::pair<int, int>> capturableAt(const MatchState& s, int mover, 
 		return std::nullopt;
 	}
 	int count = 0;
+	int own = 0;
+	// A shielded player's tokens are untouchable. Checked here rather than in the mover's path so every route to a
+	// capture -- dice, a Boost power, anything added later -- honours it without remembering to.
 	std::pair<int, int> victim{-1, -1};
 	for (int p = 0; p < (int) s.players.size(); p++) {
-		if (p == mover) {
-			continue;
-		}
 		for (int t = 0; t < TOKENS_PER_PLAYER; t++) {
-			if (board::globalCell(p, s.players[p].progress[t]) == cell) {
+			if (board::globalCell(p, s.players[p].progress[t]) != cell) {
+				continue;
+			}
+			if (p == mover) {
+				own++;
+			} else if (s.players[p].shieldTurns > 0) {
+				continue;  // shielded: not a victim, and does not block the cell either
+			} else {
 				count++;
 				victim = {p, t};
 			}
 		}
+	}
+	// Landing beside one of your own tokens forfeits the kill: chaupar's
+	// getKilledPieces bails once the destination holds more than two tokens,
+	// and after this move it would hold three (victim + yours + the mover).
+	if (own > 0) {
+		return std::nullopt;
 	}
 	if (count == 1) {
 		return victim;

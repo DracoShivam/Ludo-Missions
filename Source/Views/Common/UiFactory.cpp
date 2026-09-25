@@ -39,6 +39,23 @@ ax::ui::Scale9Sprite* makePanel(ax::Size size, ax::Color3B tint, uint8_t opacity
 	return p;
 }
 
+ax::Node* makeDieFace(int value, float px) {
+	if (value >= 1 && value <= 6) {
+		auto* s = ax::Sprite::create(diceFace(value));
+		if (s) {
+			s->setScale(px / 200.f);
+			return s;
+		}
+	}
+	// No dice7.png exists, and there should not be one: a boosted roll is a number, not a face.
+	auto* n = ax::Node::create();
+	auto* bg = makePanel(ax::Size(px, px), ax::Color3B(250, 246, 236), 255);
+	n->addChild(bg);
+	auto* label = makeLabel(std::to_string(value), px * 0.52f, true, ax::Color3B(40, 46, 70));
+	n->addChild(label);
+	return n;
+}
+
 void playSound(const char* path) {
 	ax::AudioEngine::play2d(path, false, 0.8f);
 }

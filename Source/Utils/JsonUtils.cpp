@@ -80,5 +80,46 @@ const rapidjson::Value* getObject(const rapidjson::Value& obj, const char* key) 
 	return &it->value;
 }
 
+
+namespace {
+bool toParamValue(const rapidjson::Value& v, ParamValue& out) {
+	if (v.IsBool()) out = v.GetBool();
+	else if (v.IsInt64()) out = (int64_t) v.GetInt64();
+	else if (v.IsNumber()) out = v.GetDouble();
+	else if (v.IsString()) out = std::string(v.GetString(), v.GetStringLength());
+	else return false;
+	return true;
+}
+}  // namespace
+
+Spec toSpec(const rapidjson::Value& obj) {
+	Spec s;
+	for (auto it = obj.MemberBegin(); it != obj.MemberEnd(); ++it) {
+		std::string key(it->name.GetString(), it->name.GetStringLength());
+		const auto& v = it->value;
+		if (key == "type" && v.IsString()) {
+			s.type = v.GetString();
+		} else if (v.IsObject()) {
+			s.params.children[key] = std::make_shared<Spec>(toSpec(v));
+		} else if (v.IsArray()) {
+			bool allObjects = v.Size() > 0;
+			for (auto& e : v.GetArray()) allObjects &= e.IsObject();
+			if (allObjects) {
+				for (auto& e : v.GetArray()) s.params.lists[key].push_back(toSpec(e));
+			} else {
+				auto& arr = s.params.arrays[key];
+				for (auto& e : v.GetArray()) {
+					ParamValue pv;
+					if (toParamValue(e, pv)) arr.push_back(pv);
+				}
+			}
+		} else {
+			ParamValue pv;
+			if (toParamValue(v, pv)) s.params.values[key] = pv;
+		}
+	}
+	return s;
+}
+
 }  // namespace json
 }  // namespace lm

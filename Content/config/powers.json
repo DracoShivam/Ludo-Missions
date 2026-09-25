@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "_comment": "Designer file. Adding a power is a row here. Adding a KIND of power is one class in BuiltinEffects.cpp plus one reg.add(...) line. Tier is not assigned per mission: the Director measures each mission's completion probability at offer time and that picks the tier, so retuning a mission moves its reward automatically.",
+  "_tiers": "common: P >= 0.55 | rare: 0.30 <= P < 0.55 | epic: P < 0.30",
+  "powers": [
+    {
+      "id": "dice_plus",
+      "title": "+3 Roll",
+      "desc": "Your next roll is 3 higher (max 6)",
+      "tier": "common",
+      "weight": 12,
+      "effect": {
+        "type": "diceDelta",
+        "delta": 3,
+        "who": "self"
+      }
+    },
+    {
+      "id": "reroll",
+      "title": "Reroll",
+      "desc": "Throw your roll away and roll again",
+      "tier": "common",
+      "weight": 10,
+      "effect": {
+        "type": "diceReroll"
+      }
+    },
+    {
+      "id": "dice_minus",
+      "title": "-3 Rival",
+      "desc": "A rival's next roll is 3 lower",
+      "tier": "rare",
+      "weight": 10,
+      "effect": {
+        "type": "diceDelta",
+        "delta": -3,
+        "who": "opponent"
+      }
+    },
+    {
+      "id": "protect",
+      "title": "Shield",
+      "desc": "Your tokens cannot be captured for 3 turns",
+      "tier": "rare",
+      "weight": 12,
+      "effect": {
+        "type": "immunity",
+        "turns": 3
+      }
+    },
+    {
+      "id": "force_six",
+      "title": "Force a 6",
+      "desc": "Your next roll is exactly 6",
+      "tier": "rare",
+      "weight": 8,
+      "effect": {
+        "type": "diceForce",
+        "value": 6
+      }
+    },
+    {
+      "id": "kick",
+      "_note": "Overpowered by design, so epic only. Respects star and start squares: those eight cells are the one safety guarantee the game makes, and an item that ignores them deletes the counterplay.",
+      "title": "Send Home",
+      "desc": "Send a rival token back to its yard",
+      "tier": "epic",
+      "weight": 10,
+      "effect": {
+        "type": "sendHome",
+        "respectSafeCells": true
+      }
+    },
+    {
+      "id": "swap",
+      "title": "Swap",
+      "desc": "Trade places with a rival token",
+      "tier": "epic",
+      "weight": 8,
+      "effect": {
+        "type": "swapTokens"
+      }
+    },
+    {
+      "id": "freeze",
+      "title": "Skip Turn",
+      "desc": "A rival misses their next turn",
+      "tier": "epic",
+      "weight": 8,
+      "effect": {
+        "type": "skipTurn",
+        "turns": 1
+      }
+    },
+    {
+      "id": "leap",
+      "_note": "progress 50 is the last shared-track square, i.e. the mouth of your home lane.",
+      "title": "Jump Home",
+      "desc": "Send one of your tokens to your home lane",
+      "tier": "epic",
+      "weight": 6,
+      "effect": {
+        "type": "leapTo",
+        "progress": 50
+      }
+    }
+  ]
+}

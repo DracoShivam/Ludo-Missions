@@ -26,6 +26,10 @@ public:
 	virtual bool alreadySatisfied(const EvalContext&) const { return false; }       // state => cond.eval
 	virtual int progress() const = 0;
 	virtual int target() const = 0;
+	// Target solving: a mission may author a targetRange instead of a fixed target, and the Director retunes it per
+	// offer so the difficulty lands on the player's band. No-op for shapes with no meaningful target (avoid/state).
+	virtual void setTarget(int t) {}
+	virtual bool targetIsTunable() const { return false; }
 	// Mission Director support
 	virtual std::unique_ptr<Objective> clone() const = 0;
 	virtual uint64_t stateKey() const { return (uint64_t) progress(); }

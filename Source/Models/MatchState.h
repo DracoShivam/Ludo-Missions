@@ -14,6 +14,16 @@ struct PlayerState {
 	int finishRank = 0;  // 0 = not ranked yet
 	// endTurn() skips this player like a finished one. ONLY used by the Mission Director's A* search to freeze bots.
 	bool sitsOut = false;
+	// --- power state, all turn-scoped and all reset by newMatch() ---
+	// Own turns of capture immunity remaining. Ticked down in endTurn().
+	int shieldTurns = 0;
+	// Added to the next value this player rolls, then cleared. Applied to the value pushed onto pendingRolls, NOT
+	// to the raw die -- the six and three-sixes rules must keep reading the die, or +3 would manufacture turns.
+	int diceDelta = 0;
+	// Next roll is forced to this value (1..6), then cleared. 0 = no force. Applied before diceDelta.
+	int forcedRoll = 0;
+	// Turns this player must sit out. Consumed when endTurn() picks the next seat.
+	int skipTurns = 0;
 };
 
 // NO strings / maps here: the Mission Director copies MatchState thousands of times per decision.

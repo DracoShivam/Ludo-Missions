@@ -102,7 +102,11 @@ std::vector<MissionUpdate> MissionEngine::onEvent(const GameEvent& e, const Matc
 void MissionEngine::offerPhase(OfferMoment moment, const EvalContext& ctx, std::vector<MissionUpdate>& out) {
 	int mi = (int) moment;
 	int momentCap = moment == OfferMoment::TurnStart ? m_settings.offersPerTurnStart : m_settings.offersPerAfterRoll;
-	while ((int) m_active.size() < m_settings.maxActive && m_offersThisTurn < m_settings.offersPerTurn && m_offersThisMoment[mi] < momentCap) {
+
+	// Gather the missions that could be served right now. Cooldown is the one filter worth waiving when the player
+	// has nothing live: with a small catalogue every mission can be cooling down at once, and a quiet HUD is worse
+	// than repeating a mission sooner than the designer intended.
+	auto collect = [&](bool ignoreCooldown) {
 		std::vector<CompiledMissionPtr> candidates;
 		for (const auto& m : m_defs) {
 			const MissionDef& d = m->def;
@@ -110,13 +114,27 @@ void MissionEngine::offerPhase(OfferMoment moment, const EvalContext& ctx, std::
 			if (std::find(d.moments.begin(), d.moments.end(), moment) == d.moments.end()) continue;
 			bool active = std::any_of(m_active.begin(), m_active.end(), [&](const Active& a) { return a.mission->def.id == d.id; });
 			if (active) continue;
-			auto cd = m_cooldownUntil.find(d.id);
-			if (cd != m_cooldownUntil.end() && m_selfTurnIndex < cd->second) continue;
+			if (!ignoreCooldown) {
+				auto cd = m_cooldownUntil.find(d.id);
+				if (cd != m_cooldownUntil.end() && m_selfTurnIndex < cd->second) continue;
+			}
 			if (d.maxPerMatch > 0 && m_stats.offersThisMatch[d.id] >= d.maxPerMatch) continue;
 			if (!m->offerWhen->eval(ctx)) continue;
 			if (m->makeObjective()->alreadySatisfied(ctx)) continue;
 			candidates.push_back(m);
 		}
+		return candidates;
+	};
+
+	for (;;) {
+		// "Must offer" means the player has no live mission at all. The per-turn caps exist to stop mission spam,
+		// not to enforce idle time, so they give way here.
+		bool mustOffer = m_settings.alwaysOn && m_active.empty();
+		if ((int) m_active.size() >= m_settings.maxActive) return;
+		if (!mustOffer && (m_offersThisTurn >= m_settings.offersPerTurn || m_offersThisMoment[mi] >= momentCap)) return;
+
+		std::vector<CompiledMissionPtr> candidates = collect(false);
+		if (candidates.empty() && mustOffer) candidates = collect(true);
 		if (candidates.empty()) return;
 
 		std::optional<size_t> pick;
@@ -126,12 +144,19 @@ void MissionEngine::offerPhase(OfferMoment moment, const EvalContext& ctx, std::
 		}
 		if (!pick) {
 			m_stats.humanRaceRank = queries::raceRank(ctx.state, ctx.self);
-			pick = m_strategy->choose(candidates, ctx, moment, m_stats, m_rng);
+			pick = m_strategy->choose(candidates, ctx, moment, m_stats, m_rng, mustOffer);
 		}
-		if (!pick) return;  // strategy decided: no offer at this moment
+		if (!pick) return;  // nothing is feasible from here -- genuinely nothing to ask of this player
 
 		CompiledMissionPtr m = candidates[*pick];
-		MissionTracker tracker(m->makeObjective(), m->def.turns);
+		auto objective = m->makeObjective();
+		// A ranged mission gets its actual target solved per offer, so the same definition reads as
+		// "cut 1" on a quiet board and "cut 4" on a busy one. 0 means keep the authored number.
+		int solved = m_strategy ? m_strategy->solvedTarget(*pick) : 0;
+		if (solved > 0) {
+			objective->setTarget(solved);
+		}
+		MissionTracker tracker(std::move(objective), m->def.turns);
 		tracker.begin(ctx, m->def.turns);
 		MissionInstance inst;
 		inst.uid = m_nextUid++;
@@ -139,7 +164,15 @@ void MissionEngine::offerPhase(OfferMoment moment, const EvalContext& ctx, std::
 		inst.title = m->def.title;
 		inst.turns = m->def.turns;
 		inst.rewardCoins = m->def.rewardCoins;
-		m_active.push_back({m, std::move(tracker), inst});
+		// Resolved at OFFER time, not on completion, so the card can promise what finishing is worth.
+		inst.rewardPower = m->def.rewardPower;
+		if (m_rewardResolver) {
+			double p = m_strategy ? m_strategy->lastProbability(*pick) : -1.0;
+			auto r = m_rewardResolver(m->def, p);
+			inst.rewardPower = r.powerId;
+			inst.rewardPowerTitle = r.powerTitle;
+			inst.rewardPowerTier = r.powerTier;
+		}		m_active.push_back({m, std::move(tracker), inst});
 		m_stats.offersThisMatch[m->def.id]++;
 		m_stats.lastOfferedId = m->def.id;
 		m_offersThisTurn++;

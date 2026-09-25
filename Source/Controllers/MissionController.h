@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "Controllers/Logic/Missions/MissionEngine.h"
+#include "Controllers/Logic/Rng.h"
 
 namespace lm {
 
@@ -23,6 +24,7 @@ private:
 	void saveDifficulty();
 
 	MissionEngine m_engine;
+	Rng m_rng{0};  // power drops; seeded off the debug seed like the engine
 	DirectorStrategy* m_director = nullptr;  // owned by m_engine (null when director disabled)
 	int m_completed = 0;
 	int m_failed = 0;

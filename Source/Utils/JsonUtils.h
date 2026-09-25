@@ -4,6 +4,8 @@
 
 #include "rapidjson/document.h"
 
+#include "Models/Params.h"
+
 namespace lm {
 namespace json {
 
@@ -16,6 +18,10 @@ bool getBool(const rapidjson::Value& obj, const char* key, bool def);
 std::string getString(const rapidjson::Value& obj, const char* key, const std::string& def);
 // Returns the member object or nullptr if missing / not an object.
 const rapidjson::Value* getObject(const rapidjson::Value& obj, const char* key);
+
+// Generic JSON object -> Spec (the "type" key becomes Spec::type). Shared by the mission and
+// power parsers: both compile "{type, ...params}" blocks through their own registry.
+Spec toSpec(const rapidjson::Value& obj);
 
 }  // namespace json
 }  // namespace lm

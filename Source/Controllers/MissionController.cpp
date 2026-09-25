@@ -6,6 +6,7 @@
 #include "Controllers/ConfigController.h"
 #include "Controllers/GameController.h"
 #include "Controllers/Logic/Missions/Director/DirectorStrategy.h"
+#include "Controllers/PowerController.h"
 #include "Controllers/WalletController.h"
 #include "Events/AppEvents.h"
 #include "Events/DebugEvents.h"
@@ -40,6 +41,7 @@ void MissionController::init() {
 			const GameConfig& c = ConfigController::sharedController()->config();
 			uint32_t seed = c.debug.rngSeed ? c.debug.rngSeed + 1 : 0;
 			m_engine.startMatch(state.selfPlayer, seed);
+			m_rng.seed(seed ? seed + 2 : 0);  // own stream: power drops must not perturb the director's
 			m_completed = m_failed = m_coins = 0;
 			m_matchActive = true;
 			return;
@@ -90,6 +92,28 @@ void MissionController::loadMissions() {
 	const GameConfig& cfg = ConfigController::sharedController()->config();
 	m_engine.setSettings(cfg.missions);
 	rebuildStrategy();
+
+	// A mission's power reward is resolved when it is OFFERED, not when it completes, so the card
+	// can promise it. The tier comes from the Director's own measured completion probability, which
+	// means retuning a mission moves its reward automatically -- there is no second number to keep
+	// in sync. The engine never learns what a power is; it receives an id and carries it.
+	m_engine.setRewardResolver([](const MissionDef& def, double pComplete) -> MissionEngine::ResolvedReward {
+		MissionEngine::ResolvedReward out;
+		const GameConfig& c = ConfigController::sharedController()->config();
+		if (!c.powers.enabled) {
+			return out;
+		}
+		auto* pc = PowerController::sharedController();
+		// A designer may pin a power on a mission; otherwise the tier is measured, not authored.
+		out.powerId = def.rewardPower.empty() ? pc->drawId(pc->tierForProbability(pComplete)) : def.rewardPower;
+		if (const CompiledPower* cp = pc->catalog().find(out.powerId)) {
+			out.powerTitle = cp->def.title;
+			out.powerTier = (int) cp->def.tier;
+		} else {
+			out.powerId.clear();
+		}
+		return out;
+	});
 	std::string text = ConfigController::readText(cfg.missions.file);
 	auto r = m_engine.loadFromJson(text);
 	for (auto& e : r.errors) LM_LOG_ERROR("%s", e.c_str());
@@ -136,6 +160,10 @@ void MissionController::publish(const std::vector<MissionUpdate>& updates) {
 			m_completed++;
 			m_coins += u.instance.rewardCoins;
 			WalletController::sharedController()->add(u.instance.rewardCoins, "mission:" + u.instance.id);
+		if (!u.instance.rewardPower.empty()) {
+			PowerController::sharedController()->grant(GameController::sharedController()->matchState().selfPlayer,
+													   u.instance.rewardPower, "mission:" + u.instance.id);
+		}
 			saveDifficulty();
 		} else if (u.kind == MissionUpdate::Kind::Failed) {
 			m_failed++;

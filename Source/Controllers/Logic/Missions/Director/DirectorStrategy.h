@@ -18,6 +18,8 @@ struct CandidateEval {
 	int successes = 0;
 	double p = 0;
 	double utility = 0;
+	int solvedTarget = 0;        // 0 = authored target used
+	std::vector<int> achieved;   // per-run objective progress, for ranged missions
 };
 
 // The Mission Director (docs/PLAN.md §7.7): A* feasibility -> Monte Carlo P(success) -> utility -> softmax, with gate.
@@ -25,8 +27,12 @@ class DirectorStrategy : public IOfferStrategy {
 public:
 	DirectorStrategy(const DirectorConfig& cfg, const RulesConfig& rules) : m_cfg(cfg), m_rules(rules), m_difficulty(cfg.difficulty) {}
 	std::optional<size_t> choose(const std::vector<CompiledMissionPtr>& candidates, const EvalContext& ctx, OfferMoment moment, const OfferStats& stats,
-								 Rng& rng) override;
+								 Rng& rng, bool mustOffer = false) override;
 	void onResolved(const std::string& id, bool completed) override { m_difficulty.onResolved(completed); }
+	int solvedTarget(size_t index) const override { return index < m_lastEvals.size() ? m_lastEvals[index].solvedTarget : 0; }
+	double lastProbability(size_t index) const override {
+		return index < m_lastEvals.size() && m_lastEvals[index].runs > 0 ? m_lastEvals[index].p : -1.0;
+	}
 
 	DifficultyTracker& difficulty() { return m_difficulty; }
 	const std::vector<CandidateEval>& lastEvals() const { return m_lastEvals; }

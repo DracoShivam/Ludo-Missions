@@ -45,10 +45,17 @@ MoveOption missionSeekingMove(const MatchState& s, const MissionTracker& t, int 
 
 }  // namespace
 
-bool simulateMissionOnce(const CompiledMission& mission, const MatchState& state, int self, int selfTurnIndex, const RulesConfig& rules,
-						 Rng& rng, int* turnsUsed) {
+namespace {
+
+// One playout. Returns the tracker so callers can read either the verdict or the achieved progress.
+MissionTracker runPlayout(const CompiledMission& mission, const MatchState& state, int self, int selfTurnIndex, const RulesConfig& rules,
+						  Rng& rng, int targetOverride, int* turnsUsed) {
 	MatchState s = state;
-	MissionTracker t(mission.makeObjective(), mission.def.turns);
+	auto obj = mission.makeObjective();
+	if (targetOverride > 0) {
+		obj->setTarget(targetOverride);
+	}
+	MissionTracker t(std::move(obj), mission.def.turns);
 	int selfTurn = selfTurnIndex;
 	int used = 0;
 	{
@@ -72,7 +79,20 @@ bool simulateMissionOnce(const CompiledMission& mission, const MatchState& state
 		feedAll(t, evs, s, self, selfTurn, used);
 	}
 	if (turnsUsed) *turnsUsed = used;
-	return t.status() == TrackStatus::Completed;
+	return t;
+}
+
+}  // namespace
+
+bool simulateMissionOnce(const CompiledMission& mission, const MatchState& state, int self, int selfTurnIndex, const RulesConfig& rules,
+						 Rng& rng, int* turnsUsed) {
+	return runPlayout(mission, state, self, selfTurnIndex, rules, rng, 0, turnsUsed).status() == TrackStatus::Completed;
+}
+
+int simulateMissionAchieved(const CompiledMission& mission, const MatchState& state, int self, int selfTurnIndex, const RulesConfig& rules,
+							Rng& rng, int targetForPolicy) {
+	// progress() is clamped to the objective's target, which is exactly the ceiling we care about.
+	return runPlayout(mission, state, self, selfTurnIndex, rules, rng, targetForPolicy, nullptr).objective().progress();
 }
 
 }  // namespace lm

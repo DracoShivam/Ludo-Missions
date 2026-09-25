@@ -14,6 +14,9 @@ struct MissionInstance {
 	int turnsLeft = 0;
 	int turns = 0;
 	int rewardCoins = 0;
+	std::string rewardPower;       // empty = coins only
+	std::string rewardPowerTitle;  // display name, so the card needs no catalogue lookup
+	int rewardPowerTier = 0;       // 0 common, 1 rare, 2 epic -- drives the colour
 };
 
 struct MissionUpdate {

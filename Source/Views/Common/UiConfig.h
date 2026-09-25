@@ -29,6 +29,12 @@ constexpr float PANEL_LEFT_X = 178.f;
 constexpr float PANEL_RIGHT_X = 542.f;
 constexpr float DICE_SIZE = 72.f;
 
+// Power tray: below the human panel, clear of the board and of the DEV overlay.
+constexpr float POWER_TRAY_Y = 132.f;
+// The targeting banner sits over the lower edge of the board: unmissable while aiming, and
+// absent the rest of the time, so it costs the resting layout nothing.
+constexpr float POWER_BANNER_Y = 300.f;
+
 // Colours (chaupar ViewUtils::getFlatColorByIndex)
 inline ax::Color3B playerColor3B(int p) {
 	static const ax::Color3B C[4] = {{234, 73, 55}, {34, 202, 87}, {240, 198, 31}, {30, 144, 255}};

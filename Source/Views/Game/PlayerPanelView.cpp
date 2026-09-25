@@ -63,7 +63,8 @@ void PlayerPanelView::initListeners() {
 			setActive(e.player == m_player);
 			if (e.player == m_player) setChips({});
 		} else if (e.type == GameEventType::DICE_ROLLED && e.player == m_player) {
-			m_dice->roll(e.value, m_timing.diceRollAnim * m.animScale);
+			// e.from is the physical die, e.value what the roll is worth after any power.
+			m_dice->rollModified(e.from > 0 ? e.from : e.value, e.value, m_timing.diceRollAnim * m.animScale);
 		} else if (e.type == GameEventType::MATCH_ENDED) {
 			m_dice->setTappable(false);
 		}
@@ -88,8 +89,7 @@ void PlayerPanelView::setChips(const std::vector<int>& rolls) {
 	m_chips->removeAllChildren();
 	float x = -((float) rolls.size() - 1) * 15.f;
 	for (int v : rolls) {
-		auto* s = ax::Sprite::create(ui::diceFace(v));
-		s->setScale(26.f / 200.f);
+		auto* s = ui::makeDieFace(v, 26.f);
 		s->setPosition(x, 0);
 		m_chips->addChild(s);
 		x += 30.f;

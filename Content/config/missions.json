@@ -14,17 +14,17 @@
     {
       "id": "capture_in_3",
       "title": "Hunter",
-      "description": "Capture an enemy token within {turns} turns",
+      "description": "Capture {target} enemy token(s)",
       "reward": { "coins": 50 },
       "turns": 3, "weight": 12, "cooldownTurns": 4,
       "offerWhen": { "type": "enemyAhead", "min": 1, "max": 6 },
-      "objective": { "type": "count", "event": "TOKEN_CAPTURED", "where": { "player": "self" }, "target": 1 }
+      "objective": { "type": "count", "event": "TOKEN_CAPTURED", "where": { "player": "self" }, "targetRange": [1, 4] }
     },
     {
       "id": "finish_in_5",
       "title": "Homecoming",
-      "description": "Get a token home within {turns} turns",
-      "reward": { "coins": 40 },
+      "description": "Get a token home",
+      "reward": { "coins": 40, "power": "boost" },
       "turns": 5, "weight": 10, "cooldownTurns": 5,
       "offerWhen": { "type": "tokenProgressAtLeast", "value": 44 },
       "objective": { "type": "count", "event": "TOKEN_FINISHED", "where": { "player": "self" }, "target": 1 }
@@ -32,28 +32,28 @@
     {
       "id": "double_capture_6",
       "title": "Rampage",
-      "description": "Capture {target} enemy tokens within {turns} turns ({progress}/{target})",
-      "reward": { "coins": 100 },
+      "description": "Capture {target} enemy tokens",
+      "reward": { "coins": 100, "power": "kick" },
       "turns": 6, "weight": 5, "cooldownTurns": 8,
       "offerWhen": { "type": "all", "of": [
         { "type": "tokenCount", "zone": "track", "who": "enemy", "op": "gte", "value": 2 },
         { "type": "tokenCount", "zone": "outOfYard", "who": "self", "op": "gte", "value": 1 }
       ] },
-      "objective": { "type": "count", "event": "TOKEN_CAPTURED", "where": { "player": "self" }, "target": 2 }
+      "objective": { "type": "count", "event": "TOKEN_CAPTURED", "where": { "player": "self" }, "targetRange": [2, 4] }
     },
     {
       "id": "move_25_in_3",
       "title": "Sprinter",
-      "description": "Move {target} cells within {turns} turns ({progress}/{target})",
+      "description": "Move {target} cells",
       "reward": { "coins": 30 },
       "turns": 3, "weight": 8, "cooldownTurns": 4,
       "offerWhen": { "type": "tokenCount", "zone": "outOfYard", "who": "self", "op": "gte", "value": 1 },
-      "objective": { "type": "sum", "event": "TOKEN_MOVED", "where": { "player": "self" }, "field": "steps", "target": 25 }
+      "objective": { "type": "sum", "event": "TOKEN_MOVED", "where": { "player": "self" }, "field": "steps", "targetRange": [25, 45] }
     },
     {
       "id": "survive_4",
       "title": "Untouchable",
-      "description": "Don't get captured for {turns} turns",
+      "description": "Don't get captured",
       "reward": { "coins": 40 },
       "turns": 4, "weight": 8, "cooldownTurns": 5,
       "offerWhen": { "type": "enemyBehind", "min": 1, "max": 6 },
@@ -62,16 +62,16 @@
     {
       "id": "six_streak_2",
       "title": "Hot Hand",
-      "description": "Roll a 6 in {target} turns in a row",
+      "description": "Roll a 6 in {target} turns running",
       "reward": { "coins": 60 },
       "turns": 2, "weight": 6, "cooldownTurns": 6,
       "offerWhen": { "type": "always" },
-      "objective": { "type": "streak", "event": "DICE_ROLLED", "where": { "player": "self", "value": 6 }, "target": 2 }
+      "objective": { "type": "streak", "event": "DICE_ROLLED", "where": { "player": "self", "value": 6 }, "targetRange": [2, 3] }
     },
     {
       "id": "three_out_4",
       "title": "Full Deploy",
-      "description": "Have 3 tokens out of your yard within {turns} turns",
+      "description": "Have 3 tokens out of your yard",
       "reward": { "coins": 35 },
       "turns": 4, "weight": 8, "cooldownTurns": 6,
       "offerWhen": { "type": "tokenCount", "zone": "outOfYard", "who": "self", "op": "lte", "value": 2 },
@@ -87,6 +87,94 @@
       "moments": ["afterRoll"],
       "offerWhen": { "type": "canCaptureNow" },
       "objective": { "type": "count", "event": "TOKEN_CAPTURED", "where": { "player": "self" }, "target": 1 }
+    },
+    {
+      "id": "keep_moving",
+      "_note": "The always-on filler: no offerWhen gate and a floor of one move, so it is servable from almost any live board. Deliberately the cheapest reward in the set.",
+      "title": "Keep Moving",
+      "description": "Make {target} token moves",
+      "reward": { "coins": 10 },
+      "turns": 3, "weight": 6, "cooldownTurns": 1,
+      "offerWhen": { "type": "always" },
+      "objective": { "type": "count", "event": "TOKEN_MOVED", "where": { "player": "self" }, "targetRange": [1, 6] }
+    },
+    {
+      "id": "breakout",
+      "title": "Breakout",
+      "description": "Bring {target} token(s) out of your yard",
+      "reward": { "coins": 25 },
+      "turns": 4, "weight": 9, "cooldownTurns": 4,
+      "offerWhen": { "type": "tokenCount", "zone": "yard", "who": "self", "op": "gte", "value": 1 },
+      "objective": { "type": "count", "event": "TOKEN_UNLOCKED", "where": { "player": "self" }, "targetRange": [1, 3] }
+    },
+    {
+      "id": "home_stretch",
+      "title": "Final Stretch",
+      "description": "Get {target} token(s) into your home lane",
+      "reward": { "coins": 35 },
+      "turns": 5, "weight": 9, "cooldownTurns": 5,
+      "offerWhen": { "type": "tokenCount", "zone": "track", "who": "self", "op": "gte", "value": 1 },
+      "objective": { "type": "count", "event": "TOKEN_ENTERED_HOME_LANE", "where": { "player": "self" }, "targetRange": [1, 2] }
+    },
+    {
+      "id": "long_strides",
+      "_note": "A comparator filter on the move distance, rather than a new event type.",
+      "title": "Long Strides",
+      "description": "Make {target} move(s) of 5 or more",
+      "reward": { "coins": 20 },
+      "turns": 4, "weight": 7, "cooldownTurns": 4,
+      "offerWhen": { "type": "tokenCount", "zone": "outOfYard", "who": "self", "op": "gte", "value": 1 },
+      "objective": { "type": "count", "event": "TOKEN_MOVED", "where": { "player": "self", "steps": { "gte": 5 } }, "targetRange": [1, 4] }
+    },
+    {
+      "id": "high_roller",
+      "title": "High Roller",
+      "description": "Roll a 5 or 6 {target} times",
+      "reward": { "coins": 20 },
+      "turns": 3, "weight": 6, "cooldownTurns": 4,
+      "offerWhen": { "type": "always" },
+      "objective": { "type": "count", "event": "DICE_ROLLED", "where": { "player": "self", "value": { "gte": 5 } }, "targetRange": [2, 5] }
+    },
+    {
+      "id": "bonus_chain",
+      "_note": "Bonus rolls come from captures and from sending a token home, so this rewards the aggressive line without naming it.",
+      "title": "On a Roll",
+      "description": "Earn {target} bonus roll(s)",
+      "reward": { "coins": 40 },
+      "turns": 4, "weight": 7, "cooldownTurns": 5,
+      "offerWhen": { "type": "tokenCount", "zone": "outOfYard", "who": "self", "op": "gte", "value": 1 },
+      "objective": { "type": "count", "event": "BONUS_ROLL_GRANTED", "where": { "player": "self" }, "targetRange": [1, 3] }
+    },
+    {
+      "id": "relentless",
+      "title": "Relentless",
+      "description": "Capture in {target} turns running",
+      "reward": { "coins": 80, "power": "kick" },
+      "turns": 4, "weight": 4, "cooldownTurns": 8,
+      "offerWhen": { "type": "enemyAhead", "min": 1, "max": 6 },
+      "objective": { "type": "streak", "event": "TOKEN_CAPTURED", "where": { "player": "self" }, "targetRange": [2, 3] }
+    },
+    {
+      "id": "survivalist",
+      "_note": "A harder Untouchable: longer window, only offered when at least two of your tokens are genuinely exposed.",
+      "title": "Survivalist",
+      "description": "Keep every token safe",
+      "reward": { "coins": 70, "power": "shield" },
+      "turns": 7, "weight": 5, "cooldownTurns": 8,
+      "offerWhen": { "type": "all", "of": [
+        { "type": "enemyBehind", "min": 1, "max": 6 },
+        { "type": "tokenCount", "zone": "track", "who": "self", "op": "gte", "value": 2 }
+      ] },
+      "objective": { "type": "avoid", "event": "TOKEN_CAPTURED", "where": { "victimPlayer": "self" } }
+    },
+    {
+      "id": "marathon",
+      "title": "Marathon",
+      "description": "Get a token past the halfway mark",
+      "reward": { "coins": 30 },
+      "turns": 5, "weight": 7, "cooldownTurns": 6,
+      "offerWhen": { "type": "tokenCount", "zone": "outOfYard", "who": "self", "op": "gte", "value": 1 },
+      "objective": { "type": "state", "cond": { "type": "tokenProgressAtLeast", "value": 30 } }
     }
   ]
 }

@@ -39,12 +39,40 @@ std::vector<GameEvent> TurnMachine::roll(int value) {
 		return out;
 	}
 	m_state.bonusRollPending = false;
+
+	// Power modifiers land here, before anything else looks at the number.
+	//
+	// Three different numbers come out of one throw, and conflating any two of them breaks a power:
+	//   rawDie   - what the die physically showed. Shown on the dice face, and used to tell the
+	//              player "2 -> 5" so a modifier is visibly doing something.
+	//   sixValue - the die after a FORCED value. This drives the six rules, so "Force a 6" earns
+	//              the extra roll a six always earns.
+	//   value    - sixValue plus any delta, UNCAPPED. Rolling a 6 with +3 lets you move 9.
+	//
+	// The six rules deliberately read sixValue rather than the total: a natural 6 boosted to 9 must
+	// still grant its extra roll, and a 3 boosted to 6 must not grant one it never earned.
+	PlayerState& roller = m_state.players[m_state.current];
+	const int rawDie = value;
+	int sixValue = value;
+	if (roller.forcedRoll > 0) {
+		sixValue = roller.forcedRoll;
+		roller.forcedRoll = 0;
+	}
+	value = sixValue;
+	if (roller.diceDelta != 0) {
+		value = std::max(1, sixValue + roller.diceDelta);
+		roller.diceDelta = 0;
+	}
+
 	m_state.pendingRolls.push_back(value);
 	GameEvent rolled = ev(GameEventType::DICE_ROLLED);
 	rolled.value = value;
+	// `from` carries the unmodified die. Equal to `value` unless a power changed it, which is
+	// exactly the signal the UI needs to tell the player their power did something.
+	rolled.from = rawDie;
 	out.push_back(rolled);
 
-	if (value == 6) {
+	if (sixValue == 6) {
 		m_state.consecutiveSixes++;
 		if (m_rules.threeSixesForfeit && m_state.consecutiveSixes == 3) {
 			for (int i = 0; i < 3 && !m_state.pendingRolls.empty(); i++) {
@@ -164,17 +192,41 @@ std::vector<GameEvent> TurnMachine::move(int token, int value) {
 	return out;
 }
 
+std::vector<GameEvent> TurnMachine::endTurnNow() {
+	std::vector<GameEvent> out;
+	if (m_state.phase == Phase::MatchOver || m_state.phase == Phase::NotStarted) {
+		return out;
+	}
+	endTurn(out);
+	return out;
+}
+
 void TurnMachine::endTurn(std::vector<GameEvent>& out) {
+	// Shield is measured in the shielded player's own turns, so it ticks here and nowhere else.
+	PlayerState& me = m_state.players[m_state.current];
+	if (me.shieldTurns > 0 && --me.shieldTurns == 0) {
+		out.push_back(ev(GameEventType::SHIELD_EXPIRED));
+	}
 	out.push_back(ev(GameEventType::TURN_ENDED));
 	int n = (int) m_state.players.size();
 	int next = m_state.current;
 	for (int i = 1; i <= n; i++) {
 		int cand = (m_state.current + i) % n;
-		const PlayerState& p = m_state.players[cand];
-		if (p.finishRank == 0 && !p.sitsOut) {
-			next = cand;
-			break;
+		PlayerState& p = m_state.players[cand];
+		if (p.finishRank != 0 || p.sitsOut) {
+			continue;
 		}
+		if (p.skipTurns > 0) {
+			// Frozen: burn one and keep looking. If every rival is frozen the loop falls through and
+			// `next` stays put, so the current player simply goes again.
+			p.skipTurns--;
+			GameEvent skipped = ev(GameEventType::TURN_SKIPPED);
+			skipped.player = cand;
+			out.push_back(skipped);
+			continue;
+		}
+		next = cand;
+		break;
 	}
 	m_state.current = next;
 	m_state.pendingRolls.clear();

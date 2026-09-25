@@ -36,6 +36,10 @@ scripts/run_mac.sh        # build + run with logs in terminal
 - Scheduler one-shots: `unschedule(key, this)` before `schedule(...)`, guard callbacks with a match id.
 - Formatting: clang-format (`.clang-format`, tabs width 4, column limit 150).
 - The window/resolution rules for missions live only in `MissionTracker`.
+- A mission may author `targetRange` instead of `target`; the Director solves the number per offer and the
+  objective's `setTarget` applies it. The authored floor (`min`) is what an un-directed build serves.
+- `missions.alwaysOn` (default true) guarantees a live mission every human turn: caps, cooldowns and the
+  Director's `minUtility` gate are each waived when nothing is active. `maxActive` still holds.
 
 ## Known pitfalls discovered during implementation
 - The axmol fork's `ApplicationBase` has extra pure virtuals: `AppDelegate` must implement

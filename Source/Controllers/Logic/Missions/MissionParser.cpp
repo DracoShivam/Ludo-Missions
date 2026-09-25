@@ -8,44 +8,6 @@ namespace lm {
 
 namespace {
 
-bool toParamValue(const rapidjson::Value& v, ParamValue& out) {
-	if (v.IsBool()) out = v.GetBool();
-	else if (v.IsInt64()) out = (int64_t) v.GetInt64();
-	else if (v.IsNumber()) out = v.GetDouble();
-	else if (v.IsString()) out = std::string(v.GetString(), v.GetStringLength());
-	else return false;
-	return true;
-}
-
-// Generic JSON object -> Spec ("type" key becomes Spec::type).
-Spec toSpec(const rapidjson::Value& obj) {
-	Spec s;
-	for (auto it = obj.MemberBegin(); it != obj.MemberEnd(); ++it) {
-		std::string key(it->name.GetString(), it->name.GetStringLength());
-		const auto& v = it->value;
-		if (key == "type" && v.IsString()) {
-			s.type = v.GetString();
-		} else if (v.IsObject()) {
-			s.params.children[key] = std::make_shared<Spec>(toSpec(v));
-		} else if (v.IsArray()) {
-			bool allObjects = v.Size() > 0;
-			for (auto& e : v.GetArray()) allObjects &= e.IsObject();
-			if (allObjects) {
-				for (auto& e : v.GetArray()) s.params.lists[key].push_back(toSpec(e));
-			} else {
-				auto& arr = s.params.arrays[key];
-				for (auto& e : v.GetArray()) {
-					ParamValue pv;
-					if (toParamValue(e, pv)) arr.push_back(pv);
-				}
-			}
-		} else {
-			ParamValue pv;
-			if (toParamValue(v, pv)) s.params.values[key] = pv;
-		}
-	}
-	return s;
-}
 
 const std::set<std::string> MISSION_KEYS = {"id", "enabled", "title", "description", "reward", "turns", "weight", "cooldownTurns",
 											"maxPerMatch", "moments", "offerWhen", "objective", "_note"};
@@ -97,6 +59,9 @@ MissionParseResult parseMissions(const std::string& json, const ConditionRegistr
 		d.maxPerMatch = json::getInt(m, "maxPerMatch", 0);
 		const rapidjson::Value* reward = json::getObject(m, "reward");
 		d.rewardCoins = reward ? json::getInt(*reward, "coins", -1) : -1;
+		// The id is validated against the power catalogue at load time, not here: the mission
+		// parser hands the string onward exactly as it hands on a coin amount.
+		d.rewardPower = reward ? json::getString(*reward, "power", "") : "";
 
 		if (d.title.empty()) { out.errors.push_back(where + ": missing \"title\""); continue; }
 		if (d.turns < 1) { out.errors.push_back(where + ": \"turns\" must be >= 1"); continue; }
@@ -119,10 +84,35 @@ MissionParseResult parseMissions(const std::string& json, const ConditionRegistr
 		}
 
 		const rapidjson::Value* offer = json::getObject(m, "offerWhen");
-		d.offerWhen = offer ? toSpec(*offer) : Spec{"always", {}};
+		d.offerWhen = offer ? json::toSpec(*offer) : Spec{"always", {}};
 		const rapidjson::Value* obj = json::getObject(m, "objective");
 		if (!obj) { out.errors.push_back(where + ": missing \"objective\""); continue; }
-		d.objective = toSpec(*obj);
+		d.objective = json::toSpec(*obj);
+		// "targetRange": [min, max] authors a difficulty range instead of a fixed number. The ceiling doubles as the
+		// objective's compile-time target, so an un-directed build (weighted-random strategy) still gets a valid mission.
+		auto tr = d.objective.params.arrays.find("targetRange");
+		if (tr != d.objective.params.arrays.end()) {
+			if (tr->second.size() != 2) {
+				out.errors.push_back(where + ": objective.targetRange must be [min, max]");
+				continue;
+			}
+			auto asInt = [](const ParamValue& v) -> int {
+				if (auto* i = std::get_if<int64_t>(&v)) return (int) *i;
+				if (auto* dd = std::get_if<double>(&v)) return (int) *dd;
+				return 0;
+			};
+			d.targetMin = asInt(tr->second[0]);
+			d.targetMax = asInt(tr->second[1]);
+			if (d.targetMin < 1 || d.targetMax < d.targetMin) {
+				out.errors.push_back(where + ": objective.targetRange must be [min, max] with 1 <= min <= max");
+				continue;
+			}
+			// Compile to the EASIEST variant. The Director raises it per offer; a build with the Director
+			// disabled then still serves a mission that is achievable rather than maximally hard.
+			if (!d.objective.params.values.count("target")) {
+				d.objective.params.values["target"] = (int64_t) d.targetMin;
+			}
+		}
 
 		auto cm = std::make_shared<CompiledMission>();
 		std::string cerr;

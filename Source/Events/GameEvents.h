@@ -44,6 +44,27 @@ struct AwaitingMoveMsg {
 	std::vector<MoveOption> options;
 };
 
+// One token on the board.
+struct TokenRef {
+	int player = -1;
+	int token = -1;
+	bool operator==(const TokenRef& o) const { return player == o.player && token == o.token; }
+};
+
+// THE single source of truth for what the player may tap. Both the move flow and the
+// power-targeting flow publish it, and BoardView neither knows nor cares which sent it.
+//
+// This message exists because "tappable" and "has a legal dice move" used to be the same thing:
+// BoardView only hit-tested highlighted tokens, highlights only ever came from the human's legal
+// moves, and so an enemy token could never be tapped at all -- which made every power that needs
+// a target silently impossible to use.
+struct TappableTokens {
+	static constexpr const char* NAME = "lm.game.tappableTokens";
+	enum class Reason { Move, PowerTarget };
+	Reason reason = Reason::Move;
+	std::vector<TokenRef> tokens;
+};
+
 struct RollChoiceRequested {
 	static constexpr const char* NAME = "lm.game.rollChoiceRequested";
 	int player = -1;

@@ -23,6 +23,7 @@ private:
 	ax::Label* m_desc = nullptr;
 	ax::Label* m_count = nullptr;
 	ax::Label* m_turns = nullptr;
+	ax::Label* m_power = nullptr;
 	ax::Node* m_reward = nullptr;
 	ax::DrawNode* m_bar = nullptr;
 	float m_ratio = 0;

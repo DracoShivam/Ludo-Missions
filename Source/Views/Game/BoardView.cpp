@@ -124,6 +124,10 @@ void BoardView::initListeners() {
 				animateMove(m.event, m.animScale);
 				break;
 			case GameEventType::TOKEN_CAPTURED:
+			// A kick sends a token home exactly as a capture does, and carries the same victim
+			// fields. Without this case it fell to `default:` and the board simply never redrew --
+			// which is why Send Home looked like it did nothing at all.
+			case GameEventType::TOKEN_KICKED:
 				animateCapture(m.event, m.animScale);
 				break;
 			case GameEventType::TURN_STARTED:
@@ -135,10 +139,13 @@ void BoardView::initListeners() {
 				break;
 		}
 	});
-	EventBus::subscribe<AwaitingMoveMsg>(this, [this](const AwaitingMoveMsg& m) {
+	EventBus::subscribe<TappableTokens>(this, [this](const TappableTokens& m) {
 		clearHighlights();
-		if (!m.isHuman) return;
-		for (const auto& o : m.options) m_tokens[o.player][o.token]->setHighlighted(true);
+		bool danger = m.reason == TappableTokens::Reason::PowerTarget;
+		for (const auto& t : m.tokens) {
+			if (t.player < 0 || t.player >= NUM_PLAYERS || t.token < 0 || t.token >= TOKENS_PER_PLAYER) continue;
+			m_tokens[t.player][t.token]->setHighlighted(true, danger);
+		}
 	});
 	EventBus::subscribe<RollChoiceRequested>(this, [this](const RollChoiceRequested& r) {
 		closeChoice();
@@ -198,6 +205,12 @@ void BoardView::animateMove(const GameEvent& e, float animScale) {
 	std::vector<int> path;
 	if (e.from == IN_YARD) {
 		path.push_back(0);
+	} else if (e.to < e.from || e.to - e.from > MAX_ROLL_VALUE) {
+		// Powers move tokens in ways dice cannot: Swap sends one backwards, Jump Home hurls one
+		// most of the way round. Stepping cell by cell would either produce an EMPTY path (backwards,
+		// so the token never visibly moves) or ~47 steps at 0.18s each, freezing the board for eight
+		// seconds. Glide instead -- it reads as the teleport it is.
+		path.push_back(e.to);
 	} else {
 		for (int p = e.from + 1; p <= e.to; p++) path.push_back(p);
 	}

@@ -13,6 +13,8 @@
 #include "Views/Game/ResultPopup.h"
 #include "Views/Common/ToastView.h"
 #include "Views/Missions/MissionHudView.h"
+#include "Views/Powers/PowerTrayView.h"
+#include "Views/Powers/TargetBannerView.h"
 
 namespace lm {
 
@@ -64,6 +66,16 @@ bool GameScene::init() {
 	auto* hud = MissionHudView::create(toasts, [coins] { return coins->iconWorldPosition(); });
 	hud->setPosition(vo.x, ui::topY(ui::HUD_FROM_TOP));
 	addChild(hud, 15);
+
+	// Powers are a shipping feature, not a dev tool: this used to sit inside #if LM_DEV, so there
+	// was no tray at all on iOS. Centred on `cx` like everything else, not on DESIGN_W / 2.
+	auto* tray = PowerTrayView::create();
+	tray->setPosition(cx, ui::POWER_TRAY_Y);
+	addChild(tray, 16);
+
+	auto* banner = TargetBannerView::create();
+	banner->setPosition(cx, ui::POWER_BANNER_Y);
+	addChild(banner, 140);
 
 #if defined(LM_DEV) && LM_DEV
 	auto* dbg = ax::utils::createInstance<DebugOverlayView>();

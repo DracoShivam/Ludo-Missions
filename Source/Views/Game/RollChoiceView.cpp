@@ -28,7 +28,7 @@ bool RollChoiceView::initWith(int player, int token, const std::vector<int>& val
 	addChild(bg);
 	float x = -w / 2 + 8 + chip / 2;
 	for (int v : values) {
-		auto* b = ax::ui::Button::create(ui::diceFace(v));
+		auto* b = ax::ui::Button::create(v >= 1 && v <= 6 ? ui::diceFace(v) : ui::IMG_PANEL);
 		b->setScale(chip / 200.f);
 		b->setPosition(ax::Vec2(x, 0));
 		b->setPressedActionEnabled(true);

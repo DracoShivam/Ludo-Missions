@@ -18,6 +18,9 @@ public:
 	std::vector<GameEvent> startMatch();
 	std::vector<GameEvent> roll(int value);             // precondition: phase == AwaitingRoll, 1..6
 	std::vector<GameEvent> move(int token, int value);  // precondition: phase == AwaitingMove and legal
+	// Give up the rest of the turn. Used when spending a power is configured to cost the turn; the normal
+	// paths end turns on their own.
+	std::vector<GameEvent> endTurnNow();
 
 private:
 	void endTurn(std::vector<GameEvent>& out);

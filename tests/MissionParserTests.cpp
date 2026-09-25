@@ -22,7 +22,7 @@ TEST_CASE("parser: starter missions.json loads cleanly") {
 	for (auto& w : r.warnings) MESSAGE(w);
 	CHECK(r.errors.empty());
 	CHECK(r.warnings.empty());
-	CHECK(r.missions.size() == 9);
+	CHECK(r.missions.size() == 18);  // tracks Content/config/missions.json
 }
 
 TEST_CASE("parser: errors are per mission and name the id") {
@@ -92,4 +92,35 @@ TEST_CASE("event filter: scalars, operators, roles") {
 
 TEST_CASE("text template") {
 	CHECK(renderTemplate("Move {target} in {turns} ({progress}) {x}", {{"target", 25}, {"turns", 3}, {"progress", 7}}) == "Move 25 in 3 (7) {x}");
+}
+
+TEST_CASE("parser: a mission may grant a power alongside coins") {
+	auto r = parse(R"({"missions":[{"id":"x","title":"x","reward":{"coins":50,"power":"kick"},"turns":3,
+		"objective":{"type":"count","event":"TOKEN_CAPTURED","target":1}}]})");
+	REQUIRE(r.errors.empty());
+	REQUIRE(r.missions.size() == 1);
+	CHECK(r.missions[0]->def.rewardCoins == 50);
+	CHECK(r.missions[0]->def.rewardPower == "kick");
+}
+
+TEST_CASE("parser: a reward power id is carried through verbatim") {
+	// The mission parser hands the id onward exactly as it hands on a coin amount; whether the
+	// power exists is the power catalogue's business, checked once at load rather than per mission.
+	auto r = parse(R"({"missions":[{"id":"x","title":"x","reward":{"coins":50,"power":"teleport"},"turns":3,
+		"objective":{"type":"count","event":"TOKEN_CAPTURED","target":1}}]})");
+	REQUIRE(r.errors.empty());
+	REQUIRE(r.missions.size() == 1);
+	CHECK(r.missions[0]->def.rewardPower == "teleport");
+}
+
+TEST_CASE("parser: missions without a power reward still parse") {
+	auto r = parse(test::readContent("config/missions.json"));
+	REQUIRE(r.errors.empty());
+	int withPower = 0;
+	for (const auto& m : r.missions) {
+		if (!m->def.rewardPower.empty()) withPower++;
+	}
+	MESSAGE(withPower << " of " << r.missions.size() << " shipped missions grant a power");
+	CHECK(withPower > 0);
+	CHECK(withPower < (int) r.missions.size());  // powers stay scarce
 }

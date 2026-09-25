@@ -1,5 +1,7 @@
 #include "Controllers/Logic/Missions/Director/FeasibilitySearch.h"
 
+#include <chrono>
+
 #include <algorithm>
 #include <queue>
 #include <unordered_map>
@@ -52,12 +54,16 @@ uint64_t stateHash(const Node& n) {
 }  // namespace
 
 SearchResult feasibilitySearch(const CompiledMission& mission, const MatchState& state, int self, int selfTurnIndex, const RulesConfig& rules,
-							   int maxExpansions) {
+							   int maxExpansions, int targetOverride, double maxMillis) {
 	SearchResult res;
 	if (state.current != self || (state.phase != Phase::AwaitingRoll && state.phase != Phase::AwaitingMove)) {
 		return res;  // Unknown
 	}
-	Node root{state, MissionTracker(mission.makeObjective(), mission.def.turns), 0, selfTurnIndex};
+	auto rootObj = mission.makeObjective();
+	if (targetOverride > 0) {
+		rootObj->setTarget(targetOverride);
+	}
+	Node root{state, MissionTracker(std::move(rootObj), mission.def.turns), 0, selfTurnIndex};
 	for (int p = 0; p < (int) root.s.players.size(); p++) {
 		if (p != self) root.s.players[p].sitsOut = true;
 	}
@@ -91,6 +97,7 @@ SearchResult feasibilitySearch(const CompiledMission& mission, const MatchState&
 	};
 	push(std::move(root));
 
+	auto searchStart = std::chrono::steady_clock::now();
 	while (!open.empty()) {
 		HeapItem top = open.top();
 		open.pop();
@@ -99,6 +106,13 @@ SearchResult feasibilitySearch(const CompiledMission& mission, const MatchState&
 		if (cur.t.status() == TrackStatus::Completed) {
 			res.verdict = SearchResult::Verdict::Feasible;
 			res.minTurns = cur.g;
+			return res;
+		}
+		// Check the clock every 64 expansions: often enough to bound the search, rare enough not to dominate it.
+		if (maxMillis > 0 && (res.expansions & 63) == 0 &&
+			std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - searchStart).count() > maxMillis) {
+			res.verdict = SearchResult::Verdict::Unknown;
+			res.minTurns = top.f;
 			return res;
 		}
 		if (res.expansions >= maxExpansions) {

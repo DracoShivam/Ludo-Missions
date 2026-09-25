@@ -33,7 +33,36 @@ bool DiceView::init() {
 }
 
 void DiceView::setFace(int value) {
-	m_sprite->setTexture(ui::diceFace(value));
+	if (value >= 1 && value <= 6) {
+		m_sprite->setTexture(ui::diceFace(value));
+	}
+	if (m_badge) {
+		m_badge->setVisible(false);
+	}
+}
+
+void DiceView::rollModified(int raw, int spend, float duration) {
+	roll(raw, duration);
+	m_pendingSpend = spend;  // applied when the tumble lands
+}
+
+void DiceView::setFaceWithModifier(int raw, int spend) {
+	setFace(raw);
+	if (!m_badge) {
+		m_badge = ui::makeLabel("", 22, true, ax::Color3B(255, 226, 120));
+		m_badge->setPosition(ui::DICE_SIZE * 0.42f, ui::DICE_SIZE * 0.40f);
+		addChild(m_badge, 5);
+	}
+	if (spend == raw) {
+		m_badge->setVisible(false);
+		return;
+	}
+	int delta = spend - raw;
+	m_badge->setString((delta > 0 ? "+" : "") + std::to_string(delta) + " = " + std::to_string(spend));
+	m_badge->setColor(delta > 0 ? ax::Color3B(120, 230, 150) : ax::Color3B(255, 140, 130));
+	m_badge->setVisible(true);
+	m_badge->setScale(0.4f);
+	m_badge->runAction(ax::EaseBackOut::create(ax::ScaleTo::create(0.22f, 1.f)));
 }
 
 void DiceView::setTappable(bool on) {
@@ -50,6 +79,8 @@ void DiceView::setTappable(bool on) {
 }
 
 void DiceView::roll(int value, float duration) {
+	m_pendingRaw = value;
+	m_pendingSpend = value;
 	setTappable(false);
 	m_sprite->stopAllActions();
 	float base = ui::DICE_SIZE / 200.f;
@@ -60,7 +91,7 @@ void DiceView::roll(int value, float duration) {
 		seq.pushBack(ax::CallFunc::create([this, f] { m_sprite->setTexture(ui::diceRollFrame(f)); }));
 		seq.pushBack(ax::DelayTime::create(duration / frames));
 	}
-	seq.pushBack(ax::CallFunc::create([this, value] { setFace(value); }));
+	seq.pushBack(ax::CallFunc::create([this] { setFaceWithModifier(m_pendingRaw, m_pendingSpend); }));
 	m_sprite->runAction(ax::Sequence::create(seq));
 	m_sprite->runAction(ax::Sequence::create(ax::ScaleTo::create(duration * 0.4f, base * 1.3f),
 											 ax::ScaleTo::create(duration * 0.6f, base), nullptr));

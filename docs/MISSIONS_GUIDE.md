@@ -52,11 +52,26 @@ If the file has a mistake, the terminal prints a precise message like `missions.
 
 | type | params | Behaviour | Example |
 |---|---|---|---|
-| `count` | `event`, `where`, `target` | Adds 1 for each matching event and completes at `target`. `target: 1` makes a one-shot mission. | Capture 2 tokens |
-| `sum` | `event`, `where`, `field`, `target` | Adds up a number field of each matching event. | Move 25 cells (`field: "steps"`) |
-| `streak` | `event`, `where`, `target` | Counts **consecutive turns** that each contain at least one matching event. A turn without one resets the count, and the mission fails early once it can no longer be won. | Roll a 6 two turns in a row |
+| `count` | `event`, `where`, `target` **or** `targetRange` | Adds 1 for each matching event and completes at the target. `target: 1` makes a one-shot mission. | Capture 2 tokens |
+| `sum` | `event`, `where`, `field`, `target` **or** `targetRange` | Adds up a number field of each matching event. | Move 25 cells (`field: "steps"`) |
+| `streak` | `event`, `where`, `target` **or** `targetRange` | Counts **consecutive turns** that each contain at least one matching event. A turn without one resets the count, and the mission fails early once it can no longer be won. | Roll a 6 two turns in a row |
 | `avoid` | `event`, `where` | Fails the moment a matching event happens. Completes when the turns run out. | Don't get captured for 4 turns |
 | `state` | `cond` | Completes as soon as the board condition becomes true. It is never offered if the condition is already true. | Have 3 tokens out of the yard |
+
+### `targetRange`: let the Director pick the number
+
+Instead of a fixed `"target": 2`, write `"targetRange": [1, 4]`. The Director then solves the actual target **per offer**, choosing the number whose success probability lands nearest the player's current difficulty (§4).
+
+```json
+"objective": { "type": "count", "event": "TOKEN_CAPTURED", "where": { "player": "self" }, "targetRange": [1, 4] }
+```
+
+The same definition now reads as *"Cut 1"* on a quiet board and *"Cut 4"* when four of your tokens are sitting behind enemies — one row of content, a different mission each time. Write the description with `{target}` and it renders the solved number.
+
+Rules of thumb:
+- `[min, max]` with `1 <= min <= max`; anything else is a parse error.
+- **`min` is the floor the player can be asked for**, and it is also what a build with the Director switched off will serve. Pick a `min` that is worth doing on a bad board.
+- It costs nothing extra to evaluate: one set of simulations prices every target in the range at once.
 
 ### Events and their fields (used by `event`, `where` and `field`)
 
@@ -109,7 +124,13 @@ Each time a moment happens, the Director gathers every mission that is eligible:
    - **Timeliness** gives a bonus to missions that can be finished this very turn.
    - **Novelty** favours missions not seen recently.
 
-It then picks among the best candidates with a little randomness. If none of them scores well enough (`director.utility.minUtility`), **it offers nothing**, because a bad mission is worse than no mission.
+4. **Target.** If the mission authored a `targetRange`, the Director also picks the number, using the same simulations: it takes the target whose success probability sits closest to the difficulty centre.
+
+It then picks among the best candidates with a little randomness.
+
+**Always-on (`missions.alwaysOn`, default true).** The player should never take a turn without a live mission, so when nothing is active the Director drops its standards for that one offer: the per-turn offer caps are waived, mission cooldowns are ignored, and the `minUtility` gate is bypassed in favour of the least-bad feasible candidate. "A bad mission is worse than no mission" stops being true once the mission *is* the engagement. `maxActive` is still respected, and if genuinely nothing is feasible the Director still offers nothing.
+
+Set `missions.alwaysOn` to `false` to go back to rationed offers, where cooldowns and the quality gate hold and the HUD may sit empty. With the shipped 18-mission catalogue both modes cover nearly every turn; the guarantee matters most with a small catalogue or a strict gate.
 
 With the DEV build running in a terminal, every decision is printed:
 

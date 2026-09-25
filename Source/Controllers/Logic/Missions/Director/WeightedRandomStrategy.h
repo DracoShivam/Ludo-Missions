@@ -8,7 +8,7 @@ namespace lm {
 class WeightedRandomStrategy : public IOfferStrategy {
 public:
 	std::optional<size_t> choose(const std::vector<CompiledMissionPtr>& candidates, const EvalContext&, OfferMoment, const OfferStats&,
-								 Rng& rng) override {
+								 Rng& rng, bool /*mustOffer*/ = false) override {
 		if (candidates.empty()) return std::nullopt;
 		int total = 0;
 		for (auto& c : candidates) total += c->def.weight;

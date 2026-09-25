@@ -4,10 +4,14 @@
   "timing":  { "diceRollAnim": 0.6, "tokenStep": 0.18, "captureAnim": 0.45, "botThinkDelay": 0.6,
                "autoMoveDelay": 0.35, "turnGap": 0.35, "resultPopupDelay": 1.5, "fastBotsMultiplier": 0.25 },
   "missions":{ "enabled": true, "file": "config/missions.json", "maxActive": 3, "offersPerTurn": 2,
-               "offersPerMoment": { "turnStart": 1, "afterRoll": 1 }, "defaultCooldownTurns": 3 },
-  "director":{ "enabled": true, "astarMaxExpansions": 300, "rollouts": 96, "simBudgetMs": 12,
+               "offersPerMoment": { "turnStart": 1, "afterRoll": 1 }, "defaultCooldownTurns": 3,
+               "alwaysOn": true },
+  "director":{ "enabled": true, "astarMaxExpansions": 4000, "rollouts": 96, "simBudgetMs": 12, "astarBudgetMs": 5, "maxEvaluated": 6,
                "difficulty": { "startCenter": 0.5, "halfWidth": 0.15, "stepOnComplete": -0.05, "stepOnFail": 0.05,
                                "min": 0.2, "max": 0.85, "behindBias": 0.1, "persist": true },
-               "utility":    { "timelyBonus": 0.5, "noveltyPower": 1.0, "repeatPenalty": 0.5, "temperature": 0.5, "minUtility": 0.1, "fitFloor": 0.1 } },
+               "utility":    { "timelyBonus": 0.5, "noveltyPower": 1.0, "repeatPenalty": 0.5, "temperature": 0.5, "minUtility": 0.1, "fitFloor": 0.1, "minProbability": 0.05 } },
+  "powers":  { "enabled": true, "file": "config/powers.json", "maxHeld": 3, "maxTotalHeld": 4,
+               "commonAbove": 0.55, "rareAbove": 0.30, "onTokenHomeTier": "rare",
+               "botsUsePowers": true, "botGrantEveryTurns": 12, "botRareChance": 0.35 },
   "debug":   { "rngSeed": 0, "fastBots": false, "forcedMission": "", "startProgress": [] }
 }

@@ -28,6 +28,7 @@
 #include "Controllers/GameController.h"
 #include "Controllers/MissionController.h"
 #include "Controllers/SceneController.h"
+#include "Controllers/PowerController.h"
 #include "Controllers/WalletController.h"
 
 #define USE_AUDIO_ENGINE 1
@@ -93,6 +94,8 @@ bool AppDelegate::applicationDidFinishLaunching()
     // Boot order (docs/PLAN.md §10 P1): config -> wallet -> scenes -> game -> missions -> first scene
     lm::ConfigController::sharedController()->init();
     lm::WalletController::sharedController()->init();
+    lm::PowerController::sharedController()->init();
+
     lm::SceneController::sharedController()->init();
     lm::GameController::sharedController()->init();
     lm::MissionController::sharedController()->init();

@@ -1,6 +1,7 @@
 #include "Views/Missions/MissionCardView.h"
 
 #include "Views/Common/UiConfig.h"
+#include "Views/Common/PowerLook.h"
 #include "Views/Common/UiFactory.h"
 
 namespace lm {
@@ -47,10 +48,20 @@ bool MissionCardView::initWith(const MissionInstance& m) {
 	m_desc = ui::makeLabel("", 15, false, ax::Color3B(225, 230, 250));
 	m_desc->setDimensions(W - 24, 40);
 	m_desc->setAlignment(ax::TextHAlignment::LEFT, ax::TextVAlignment::CENTER);
+	// Shrink to fit rather than overflow the box: with VAlignment CENTER an over-long string spills symmetrically
+	// into the title above and the progress bar below, which is how a three-line description used to render.
+	m_desc->enableWrap(true);
+	m_desc->setOverflow(ax::Label::Overflow::SHRINK);
 	m_desc->setPosition(0, 6);
 	addChild(m_desc);
 
 	m_bar = ax::DrawNode::create();
+	// The promised power sits in the footer, between the counter and the turns -- the one gap in that row, and
+	// close enough to the reward that the two read as one offer.
+	m_power = ui::makeLabel("", 13, true, ax::Color3B::WHITE);
+	m_power->setPosition(0, -H / 2 + 12);
+	addChild(m_power);
+
 	m_bar->setPosition(-BAR_W / 2, -H / 2 + 26);
 	addChild(m_bar);
 
@@ -77,6 +88,9 @@ void MissionCardView::drawBar(float ratio, ax::Color4B color) {
 
 void MissionCardView::update(const MissionInstance& m) {
 	m_desc->setString(m.description);
+	// The promised power, shown up front so finishing the mission is worth something visible.
+	m_power->setString(m.rewardPower.empty() ? "" : "+ " + m.rewardPowerTitle);
+	m_power->setColor(ui::powerTierColor(m.rewardPowerTier));
 	m_count->setString(std::to_string(m.progress) + "/" + std::to_string(m.target));
 	m_turns->setString(m.turnsLeft == 1 ? "last turn!" : std::to_string(m.turnsLeft) + " turns left");
 	m_turns->setColor(m.turnsLeft <= 1 ? ax::Color3B(255, 140, 120) : ax::Color3B(200, 205, 230));

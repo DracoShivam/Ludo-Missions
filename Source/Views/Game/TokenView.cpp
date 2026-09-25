@@ -44,15 +44,28 @@ bool TokenView::initWith(int player, int token) {
 	return true;
 }
 
-void TokenView::setHighlighted(bool on) {
-	if (on == m_highlighted) {
+void TokenView::setHighlighted(bool on, bool danger) {
+	if (on == m_highlighted && danger == m_danger) {
 		return;
 	}
 	m_highlighted = on;
+	m_danger = danger;
 	m_shine->stopAllActions();
 	m_shine->setVisible(on);
+	m_shine->setColor(danger ? ax::Color3B(255, 120, 110) : ax::Color3B::WHITE);
 	if (on) {
-		m_shine->runAction(ax::RepeatForever::create(ax::RotateBy::create(1.0f, 360.f)));
+		if (danger) {
+			// Pulse rather than rotate: a target reads as urgent, a movable token as available.
+			m_shine->setScale(1.f);
+			m_shine->runAction(ax::RepeatForever::create(
+				ax::Sequence::create(ax::ScaleTo::create(0.35f, 1.25f), ax::ScaleTo::create(0.35f, 1.0f), nullptr)));
+		} else {
+			m_shine->setScale(1.f);
+			m_shine->runAction(ax::RepeatForever::create(ax::RotateBy::create(1.0f, 360.f)));
+		}
+	} else {
+		m_shine->setScale(1.f);
+		m_shine->setRotation(0.f);
 	}
 }
 

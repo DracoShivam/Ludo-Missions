@@ -4,6 +4,9 @@
 #include "rapidjson/writer.h"
 
 #include "Controllers/Logic/Missions/MissionEngine.h"
+#include "Controllers/Logic/BotBrain.h"
+#include "Controllers/Logic/Rng.h"
+#include "Controllers/Logic/Rules.h"
 #include "Controllers/Logic/TurnMachine.h"
 #include "TestHelpers.h"
 
@@ -129,7 +132,7 @@ TEST_CASE("engine: move_25_in_3 sums steps") {
 	auto u = h.feed(m);
 	REQUIRE(has(u, K::Progress));
 	CHECK(u[0].instance.progress == 12);
-	CHECK(u[0].instance.description == "Move 25 cells within 3 turns (12/25)");
+	CHECK(u[0].instance.description == "Move 25 cells");  // progress and turns live in the card footer
 	m.steps = 13;
 	CHECK(has(h.feed(m), K::Completed));
 }
@@ -156,7 +159,11 @@ TEST_CASE("engine: caps, no duplicates, cooldown, voiding") {
 }
 
 TEST_CASE("engine: cooldown blocks re-offer until turn j + cooldown + 1") {
-	Harness h("{\"missions\":[" + alwaysMission("a", 1, 2) + "]}");
+	// Cooldown is a pacing preference, so it only holds when missions are rationed. With alwaysOn the player is
+	// never left idle and the cooldown gives way -- that case is covered by the always-on tests below.
+	MissionSettings rationed;
+	rationed.alwaysOn = false;
+	Harness h("{\"missions\":[" + alwaysMission("a", 1, 2) + "]}", rationed);
 	REQUIRE(has(h.turnStart(), K::Offered));  // turn 1
 	REQUIRE(has(h.turnEnd(), K::Failed));     // resolved in turn 1 -> eligible at turn 4
 	CHECK(h.turnStart().empty());             // 2
@@ -164,6 +171,58 @@ TEST_CASE("engine: cooldown blocks re-offer until turn j + cooldown + 1") {
 	CHECK(h.turnStart().empty());  // 3
 	h.turnEnd();
 	CHECK(has(h.turnStart(), K::Offered));  // 4
+}
+
+// ---------------------------------------------------------------------------
+// Always-on: the player should never start a turn without a live mission.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("always-on: the sole mission is re-offered immediately despite its cooldown") {
+	Harness h("{\"missions\":[" + alwaysMission("a", 1, 5) + "]}");  // cooldown 5, window 1
+	REQUIRE(has(h.turnStart(), K::Offered));
+	REQUIRE(has(h.turnEnd(), K::Failed));
+	// Rationed, this would stay quiet for five turns.
+	CHECK(has(h.turnStart(), K::Offered));
+	REQUIRE(has(h.turnEnd(), K::Failed));
+	CHECK(has(h.turnStart(), K::Offered));
+}
+
+TEST_CASE("always-on: every turn over a long run starts with a mission live") {
+	Harness h("{\"missions\":[" + alwaysMission("a", 1, 3) + "]}");
+	for (int turn = 0; turn < 25; turn++) {
+		h.turnStart();
+		CHECK_MESSAGE(!h.engine.activeInstances().empty(), "no live mission at turn " << turn);
+		h.turnEnd();
+	}
+}
+
+TEST_CASE("always-on: maxActive still holds once a mission is live") {
+	// The caps exist to stop mission spam, not to enforce idle time. Waiving them when the HUD is empty must not
+	// turn into waiving them always: with one long mission live and maxActive 1, nothing more may be offered.
+	MissionSettings s;
+	s.maxActive = 1;
+	Harness h("{\"missions\":[" + alwaysMission("a", 9, 0) + "," + alwaysMission("b", 9, 0) + "]}", s);
+	REQUIRE(h.turnStart().size() == 1);
+	CHECK(h.engine.activeInstances().size() == 1);
+	h.turnEnd();
+	CHECK(h.turnStart().empty());  // still live, still capped
+	CHECK(h.engine.activeInstances().size() == 1);
+}
+
+TEST_CASE("always-on: one offer per moment is still the rule when nothing is live") {
+	// Waiving the caps buys exactly one mission, not a burst of three.
+	Harness h("{\"missions\":[" + alwaysMission("a", 9, 0) + "," + alwaysMission("b", 9, 0) + "," + alwaysMission("c", 9, 0) + "]}");
+	CHECK(h.turnStart().size() == 1);
+	CHECK(h.engine.activeInstances().size() == 1);
+}
+
+TEST_CASE("always-on can be switched off") {
+	MissionSettings s;
+	s.alwaysOn = false;
+	Harness h("{\"missions\":[" + alwaysMission("a", 1, 5) + "]}", s);
+	REQUIRE(has(h.turnStart(), K::Offered));
+	REQUIRE(has(h.turnEnd(), K::Failed));
+	CHECK(h.turnStart().empty());
 }
 
 TEST_CASE("engine: hot reload keeps active instances alive") {
@@ -203,4 +262,113 @@ TEST_CASE("integration: Hunter scenario through the real TurnMachine") {
 	run(m.roll(3));
 	run(m.move(0, 3));
 	CHECK(has(all, K::Completed, "capture_in_3"));
+}
+
+// ---------------------------------------------------------------------------
+// The always-on objective, measured the only way that really counts: play a
+// whole match through the real TurnMachine and check the HUD is never empty on
+// a human turn. Preference rules elsewhere (cooldown, caps, the Director's
+// quality gate) are exactly the kind of thing that can quietly reintroduce a
+// gap, so this asserts the outcome rather than the mechanism.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+struct Coverage {
+	int humanTurns = 0;
+	int covered = 0;
+};
+
+Coverage playMatchMeasuringCoverage(MissionEngine& engine, uint32_t seed, int maxCommands = 8000) {
+	MatchState s = test::allInYard();
+	RulesConfig rules;
+	TurnMachine tm(s, rules);
+	Rng rng(seed);
+	Coverage cov;
+
+	auto feed = [&](const std::vector<GameEvent>& evs) {
+		for (const auto& e : evs) {
+			engine.onEvent(e, s);
+			if (e.type == ET::TURN_STARTED && e.player == 0 && s.phase != Phase::MatchOver) {
+				cov.humanTurns++;
+				if (!engine.activeInstances().empty()) cov.covered++;
+			}
+		}
+	};
+
+	engine.startMatch(0, seed);
+	feed(tm.startMatch());
+	for (int cmd = 0; cmd < maxCommands && s.phase != Phase::MatchOver; cmd++) {
+		if (s.phase == Phase::AwaitingRoll) {
+			feed(tm.roll(rng.dice()));
+		} else if (s.phase == Phase::AwaitingMove) {
+			auto opts = rules::legalMoves(s, s.current);
+			if (opts.empty()) break;
+			MoveOption o = BotBrain::choose(s, opts, rng);
+			feed(tm.move(o.token, o.value));
+		} else {
+			break;
+		}
+	}
+	return cov;
+}
+
+}  // namespace
+
+TEST_CASE("always-on: a full match never starts a human turn without a live mission") {
+	for (uint32_t seed : {3u, 11u, 29u, 57u, 101u}) {
+		MissionEngine engine;
+		REQUIRE(engine.loadFromJson(test::readContent("config/missions.json")).errors.empty());
+		Coverage cov = playMatchMeasuringCoverage(engine, seed);
+		CHECK(cov.humanTurns > 10);
+		CHECK_MESSAGE(cov.covered == cov.humanTurns,
+					  "seed " << seed << ": " << (cov.humanTurns - cov.covered) << " of " << cov.humanTurns << " human turns had no mission");
+	}
+}
+
+TEST_CASE("always-on: with the full catalogue, rationing alone already covers every turn") {
+	// Worth stating plainly: at 18 missions the offer conditions are broad enough that the weighted-random
+	// strategy finds a candidate on practically every turn, so the guarantee is not what produces the number
+	// above. It earns its keep in the two regimes below -- a thin catalogue, and the Director's quality gate.
+	int gaps = 0;
+	for (uint32_t seed : {3u, 11u, 29u, 57u, 101u}) {
+		MissionEngine engine;
+		MissionSettings s;
+		s.alwaysOn = false;
+		engine.setSettings(s);
+		REQUIRE(engine.loadFromJson(test::readContent("config/missions.json")).errors.empty());
+		Coverage cov = playMatchMeasuringCoverage(engine, seed);
+		gaps += cov.humanTurns - cov.covered;
+	}
+	MESSAGE("rationed mode, full catalogue: " << gaps << " uncovered human turns across 5 matches");
+	CHECK(gaps == 0);
+}
+
+TEST_CASE("always-on: with a thin catalogue it is the difference between cover and gaps") {
+	// Two missions on long cooldowns -- the regime the guarantee exists for.
+	const std::string thin = "{\"missions\":[" + alwaysMission("a", 2, 6) + "," + alwaysMission("b", 2, 6) + "]}";
+
+	int rationedGaps = 0, alwaysOnGaps = 0, turns = 0;
+	for (uint32_t seed : {3u, 11u, 29u, 57u, 101u}) {
+		{
+			MissionEngine engine;
+			MissionSettings s;
+			s.alwaysOn = false;
+			engine.setSettings(s);
+			REQUIRE(engine.loadFromJson(thin).errors.empty());
+			Coverage cov = playMatchMeasuringCoverage(engine, seed);
+			rationedGaps += cov.humanTurns - cov.covered;
+			turns += cov.humanTurns;
+		}
+		{
+			MissionEngine engine;
+			REQUIRE(engine.loadFromJson(thin).errors.empty());
+			Coverage cov = playMatchMeasuringCoverage(engine, seed);
+			alwaysOnGaps += cov.humanTurns - cov.covered;
+		}
+	}
+	MESSAGE("thin catalogue over " << turns << " human turns: rationed left " << rationedGaps << " uncovered, always-on left "
+									<< alwaysOnGaps);
+	CHECK(rationedGaps > 0);   // the gap the guarantee removes is real
+	CHECK(alwaysOnGaps == 0);  // and it removes all of it
 }

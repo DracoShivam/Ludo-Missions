@@ -56,6 +56,7 @@ ConfigParseResult parseGameConfig(const std::string& jsonText) {
 		ms.maxActive = json::getInt(*m, "maxActive", ms.maxActive);
 		ms.offersPerTurn = json::getInt(*m, "offersPerTurn", ms.offersPerTurn);
 		ms.defaultCooldownTurns = json::getInt(*m, "defaultCooldownTurns", ms.defaultCooldownTurns);
+		ms.alwaysOn = json::getBool(*m, "alwaysOn", ms.alwaysOn);
 		if (auto* opm = json::getObject(*m, "offersPerMoment")) {
 			ms.offersPerTurnStart = json::getInt(*opm, "turnStart", ms.offersPerTurnStart);
 			ms.offersPerAfterRoll = json::getInt(*opm, "afterRoll", ms.offersPerAfterRoll);
@@ -67,6 +68,8 @@ ConfigParseResult parseGameConfig(const std::string& jsonText) {
 		dc.astarMaxExpansions = json::getInt(*d, "astarMaxExpansions", dc.astarMaxExpansions);
 		dc.rollouts = json::getInt(*d, "rollouts", dc.rollouts);
 		dc.simBudgetMs = json::getInt(*d, "simBudgetMs", dc.simBudgetMs);
+		dc.astarBudgetMs = json::getInt(*d, "astarBudgetMs", dc.astarBudgetMs);
+		dc.maxEvaluated = json::getInt(*d, "maxEvaluated", dc.maxEvaluated);
 		if (auto* df = json::getObject(*d, "difficulty")) {
 			auto& x = dc.difficulty;
 			x.startCenter = json::getDouble(*df, "startCenter", x.startCenter);
@@ -86,7 +89,21 @@ ConfigParseResult parseGameConfig(const std::string& jsonText) {
 			x.temperature = json::getDouble(*u, "temperature", x.temperature);
 			x.minUtility = json::getDouble(*u, "minUtility", x.minUtility);
 			x.fitFloor = json::getDouble(*u, "fitFloor", x.fitFloor);
+			x.minProbability = json::getDouble(*u, "minProbability", x.minProbability);
 		}
+	}
+	if (auto* pw = json::getObject(doc, "powers")) {
+		auto& x = c.powers;
+		x.enabled = json::getBool(*pw, "enabled", x.enabled);
+		x.file = json::getString(*pw, "file", x.file);
+		x.maxHeld = json::getInt(*pw, "maxHeld", x.maxHeld);
+		x.maxTotalHeld = json::getInt(*pw, "maxTotalHeld", x.maxTotalHeld);
+		x.commonAbove = json::getDouble(*pw, "commonAbove", x.commonAbove);
+		x.rareAbove = json::getDouble(*pw, "rareAbove", x.rareAbove);
+		x.onTokenHomeTier = json::getString(*pw, "onTokenHomeTier", x.onTokenHomeTier);
+		x.botsUsePowers = json::getBool(*pw, "botsUsePowers", x.botsUsePowers);
+		x.botGrantEveryTurns = json::getInt(*pw, "botGrantEveryTurns", x.botGrantEveryTurns);
+		x.botRareChance = json::getDouble(*pw, "botRareChance", x.botRareChance);
 	}
 	if (auto* g = json::getObject(doc, "debug")) {
 		auto& dbg = c.debug;

@@ -12,4 +12,10 @@ namespace lm {
 bool simulateMissionOnce(const CompiledMission& mission, const MatchState& state, int self, int selfTurnIndex, const RulesConfig& rules,
 						 Rng& rng, int* turnsUsed = nullptr);
 
+// Same playout, but reports how far the objective actually got instead of a yes/no. One set of these prices EVERY
+// target at once -- P(complete at target t) is just the share of runs whose achieved value reached t -- which is what
+// makes solving a target affordable. `targetForPolicy` is the ceiling the simulated player plays toward.
+int simulateMissionAchieved(const CompiledMission& mission, const MatchState& state, int self, int selfTurnIndex, const RulesConfig& rules,
+							Rng& rng, int targetForPolicy);
+
 }  // namespace lm

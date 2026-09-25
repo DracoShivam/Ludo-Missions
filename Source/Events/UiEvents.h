@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 // View -> Controller intents. Views publish these; they never call controllers directly.
 namespace lm {
 
@@ -28,6 +30,13 @@ struct UiRollChosen {
 	int player = -1;
 	int token = -1;
 	int value = 0;
+};
+struct UiPowerTapped {
+	static constexpr const char* NAME = "lm.ui.powerTapped";
+	std::string id;  // power id as authored in powers.json
+};
+struct UiPowerCancelled {
+	static constexpr const char* NAME = "lm.ui.powerCancelled";
 };
 struct UiResultClosed {
 	static constexpr const char* NAME = "lm.ui.resultClosed";

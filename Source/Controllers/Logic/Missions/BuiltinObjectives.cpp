@@ -52,6 +52,10 @@ public:
 	}
 	int progress() const override { return std::min(m_progress, m_target); }
 	int target() const override { return m_target; }
+	void setTarget(int t) override {
+		if (t > 0) m_target = t;
+	}
+	bool targetIsTunable() const override { return true; }
 	std::unique_ptr<Objective> clone() const override { return std::make_unique<CountObjective>(*this); }
 	// Admissible for "finish a token": without capture bonuses a turn moves <= 17 cells (6+6+5; a third 6 forfeits).
 	// Only valid when no enemy token is capturable on the track (no bonus rolls possible before the goal).
@@ -91,6 +95,10 @@ public:
 	}
 	int progress() const override { return m_streak; }
 	int target() const override { return m_target; }
+	void setTarget(int t) override {
+		if (t > 0) m_target = t;
+	}
+	bool targetIsTunable() const override { return true; }
 	std::unique_ptr<Objective> clone() const override { return std::make_unique<StreakObjective>(*this); }
 	uint64_t stateKey() const override { return (uint64_t) m_streak * 2 + (m_metThisTurn ? 1 : 0); }
 	int minTurnsHint(const EvalContext&, int) const override { return std::max(0, m_target - m_streak - (m_metThisTurn ? 1 : 0)); }
@@ -171,9 +179,9 @@ void registerBuiltinObjectives(ObjectiveRegistry& reg) {
 			return [ev, target, field]() { return std::unique_ptr<Objective>(new CountObjective(ev, target, field)); };
 		};
 	};
-	reg.add("count", {{"event", "target"}, {"where"}, countLike(false)});
-	reg.add("sum", {{"event", "field", "target"}, {"where"}, countLike(true)});
-	reg.add("streak", {{"event", "target"}, {"where"}, [](const Spec& s, const ConditionRegistry&, std::string& err) -> ObjectiveFactory {
+	reg.add("count", {{"event", "target"}, {"where", "targetRange"}, countLike(false)});
+	reg.add("sum", {{"event", "field", "target"}, {"where", "targetRange"}, countLike(true)});
+	reg.add("streak", {{"event", "target"}, {"where", "targetRange"}, [](const Spec& s, const ConditionRegistry&, std::string& err) -> ObjectiveFactory {
 		auto ev = std::make_shared<EventSpec>();
 		if (!compileEventSpec(s, *ev, err)) return nullptr;
 		int target = std::max(1, s.params.getInt("target", 1));

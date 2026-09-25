@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -23,6 +24,16 @@ public:
 	MissionParseResult loadFromJson(const std::string& json);  // replaces defs for FUTURE offers
 	void setSettings(const MissionSettings& s) { m_settings = s; }
 	void setStrategy(std::unique_ptr<IOfferStrategy> s);
+	// Called once per offer with the mission and its measured completion probability (negative when
+	// unmeasured). Returns the power id to promise on the card, or "" for coins only. Keeps the
+	// engine ignorant of what a power is: it receives a string and carries it, like a coin amount.
+	struct ResolvedReward {
+		std::string powerId;
+		std::string powerTitle;
+		int powerTier = 0;
+	};
+	using RewardResolver = std::function<ResolvedReward(const MissionDef&, double pComplete)>;
+	void setRewardResolver(RewardResolver r) { m_rewardResolver = std::move(r); }
 	IOfferStrategy* strategy() const { return m_strategy.get(); }
 	void startMatch(int selfPlayer, uint32_t seed);
 	std::vector<MissionUpdate> onEvent(const GameEvent& e, const MatchState& state);
@@ -47,6 +58,7 @@ private:
 	ConditionRegistry m_conds;
 	ObjectiveRegistry m_objs;
 	std::vector<CompiledMissionPtr> m_defs;
+	RewardResolver m_rewardResolver;
 	MissionSettings m_settings;
 	std::unique_ptr<IOfferStrategy> m_strategy;
 	Rng m_rng;
