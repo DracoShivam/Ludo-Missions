@@ -35,3 +35,12 @@ scripts/run_mac.sh        # build + run with logs in terminal
 - Scheduler one-shots: `unschedule(key, this)` before `schedule(...)`, guard callbacks with a match id.
 - Formatting: clang-format (`.clang-format`, tabs width 4, column limit 150).
 - The window/resolution rules for missions live only in `MissionTracker`.
+
+## Known pitfalls discovered during implementation
+- The axmol fork's `ApplicationBase` has extra pure virtuals: `AppDelegate` must implement
+  `applicationWillResignActive()` and `applicationDidBecomeActive()`.
+- The Command Line Tools SDK on this machine is newer than Xcode's linker; `scripts/run_tests.sh` pins
+  `CMAKE_OSX_SYSROOT`/compiler to Xcode via `xcrun`. Do the same for any other non-Xcode CMake build.
+- doctest: don't name a free function `toString(...)` in `lm` (ADL clash with doctest's stringifier; use
+  `gameEventTypeName`), don't alias a type as `T` in test files, and use `<<` in `CHECK_MESSAGE`.
+- Screenshots need Screen Recording permission for the terminal; otherwise verify visuals manually.

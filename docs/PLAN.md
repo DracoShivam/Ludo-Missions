@@ -1215,7 +1215,8 @@ Tests (`DirectorTests.cpp`, all with `simBudgetMs = 0` and fixed seeds):
 19. **Test CMake:** `add_executable` doesn't expand globs, so use `file(GLOB ...)`. doctest's `main` comes from `#include "doctest/doctest.cpp"` in `test_main.cpp` only.
 20. **`EventBus::subscribe<T>` needs the explicit `<T>`.** `init()` must be public for `utils::createInstance`.
 21. **Logs:** run the Mac binary directly (not with `open`), or the stderr logs are lost.
-22. **Don't edit `axmol/`.** If an engine bug appears, work around it in game code.
+22. **Implementation discoveries** (also in AGENTS.md): fork AppDelegate needs `applicationWillResignActive/DidBecomeActive`; tests pin Xcode SDK via xcrun; `GameEvent` name function is `gameEventTypeName` (doctest ADL).
+27. **Don't edit `axmol/`.** If an engine bug appears, work around it in game code.
 23. **Director consistency:** the window/resolution rules exist **only** in `MissionTracker`. Never re-implement them in the search or the simulator, or P estimates will disagree with the real outcomes.
 24. **Director determinism:** tests use `simBudgetMs = 0`. Use one seeded `Rng` and a fixed candidate order. Never use `std::unordered_map` iteration order in scoring or selection; use a vector or `std::map`.
 25. **MatchState copy cost:** no strings or maps in MatchState. `sitsOut` must never leak into a real match. Assert it in `GameController::newMatch`.
