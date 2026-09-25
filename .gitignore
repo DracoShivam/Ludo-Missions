@@ -1,0 +1,9 @@
+/chaupar/
+/axmol/
+/build*/
+.DS_Store
+*.xcuserstate
+compile_commands.json
+/.cache/
+.vscode/
+build_log.txt
