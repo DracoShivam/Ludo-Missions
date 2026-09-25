@@ -1,0 +1,59 @@
+#pragma once
+
+#include <deque>
+#include <functional>
+#include <memory>
+
+#include "Controllers/Logic/Rng.h"
+#include "Controllers/Logic/TurnMachine.h"
+#include "Models/GameConfig.h"
+#include "Models/MatchState.h"
+
+namespace lm {
+
+struct UiTokenTapped;
+struct UiRollChosen;
+
+// Owns the match. Runs the pure TurnMachine, paces its events for the views (docs/PLAN.md §10 P3), drives bots.
+// Knows NOTHING about missions.
+class GameController {
+public:
+	static GameController* sharedController();
+	void init();
+	const MatchState& matchState() const { return m_state; }
+
+private:
+	GameController() = default;
+	void newMatch();
+	void abortMatch();
+	void tick(float dt);
+	void enqueue(const std::vector<GameEvent>& events);
+	void promptCurrent();
+	void doRoll();
+	void doMove(int token, int value);
+	float delayAfter(const GameEvent& e) const;
+	float animScaleFor(int player) const;
+	bool isBot(int player) const;
+	bool humanCanAct(Phase phase) const;
+	void onTokenTapped(const UiTokenTapped& e);
+	void onRollChosen(const UiRollChosen& e);
+	void after(float delay, const char* key, std::function<void()> fn);
+	void publishDebugState();
+
+	MatchState m_state;
+	std::unique_ptr<TurnMachine> m_machine;
+	RulesConfig m_rules;
+	TimingConfig m_timing;
+	Rng m_rng;
+	std::deque<GameEvent> m_queue;
+	float m_wait = 0.f;
+	bool m_running = false;
+	bool m_prompted = false;
+	bool m_inputLocked = true;
+	int m_matchId = 0;
+	int m_forcedRoll = 0;
+	bool m_fastBots = false;
+	bool m_autoplay = false;  // DEV: env LM_AUTOPLAY=1 -> the BotBrain also plays the human seat (soak tests)
+};
+
+}  // namespace lm

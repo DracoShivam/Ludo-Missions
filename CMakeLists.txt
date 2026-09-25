@@ -194,6 +194,11 @@ endif()
 
 target_include_directories(${APP_NAME} PRIVATE ${GAME_INC_DIRS})
 
+# Pure logic (rules, mission engine, Mission Director) is always optimised: the Director's A* + Monte Carlo
+# runs inside a 12 ms budget and is ~8x slower at -O0.
+file(GLOB_RECURSE LM_LOGIC_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Source/Controllers/Logic/*.cpp)
+set_source_files_properties(${LM_LOGIC_SOURCES} PROPERTIES COMPILE_OPTIONS "-O2")
+
 if(MACOSX AND LM_DEV)
     target_compile_definitions(${APP_NAME} PRIVATE LM_DEV=1 LM_SOURCE_CONTENT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Content/")
 endif()

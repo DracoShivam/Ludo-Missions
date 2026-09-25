@@ -24,7 +24,11 @@
  ****************************************************************************/
 
 #include "AppDelegate.h"
-#include "MainScene.h"
+#include "Controllers/ConfigController.h"
+#include "Controllers/GameController.h"
+#include "Controllers/MissionController.h"
+#include "Controllers/SceneController.h"
+#include "Controllers/WalletController.h"
 
 #define USE_AUDIO_ENGINE 1
 
@@ -79,11 +83,20 @@ bool AppDelegate::applicationDidFinishLaunching()
     glView->setDesignResolutionSize(designResolutionSize.width, designResolutionSize.height,
                                     ResolutionPolicy::FIXED_WIDTH);
 
-    // create a scene. it's an autorelease object
-    auto scene = utils::createInstance<MainScene>();
+    // The in-house axmol fork resolves files ONLY via a basename-keyed cache (FileUtils::gb_fileCache, no filesystem
+    // fallback). Register the whole bundled Content dir. => every file in Content/ must have a UNIQUE basename.
+    {
+        auto* fu = FileUtils::getInstance();
+        fu->addDirToCache(fu->getDefaultResourceRootPath());
+    }
 
-    // run
-    director->runWithScene(scene);
+    // Boot order (docs/PLAN.md §10 P1): config -> wallet -> scenes -> game -> missions -> first scene
+    lm::ConfigController::sharedController()->init();
+    lm::WalletController::sharedController()->init();
+    lm::SceneController::sharedController()->init();
+    lm::GameController::sharedController()->init();
+    lm::MissionController::sharedController()->init();
+    lm::SceneController::sharedController()->runLobby();
 
     return true;
 }

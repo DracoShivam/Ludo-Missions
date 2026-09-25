@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "missions": [
+    {
+      "id": "roll_six_now",
+      "_note": "One-shot: any 6 during this turn.",
+      "title": "Lucky Six",
+      "description": "Roll a 6 this turn",
+      "reward": { "coins": 20 },
+      "turns": 1, "weight": 10, "cooldownTurns": 3,
+      "offerWhen": { "type": "always" },
+      "objective": { "type": "count", "event": "DICE_ROLLED", "where": { "player": "self", "value": 6 }, "target": 1 }
+    },
+    {
+      "id": "capture_in_3",
+      "title": "Hunter",
+      "description": "Capture an enemy token within {turns} turns",
+      "reward": { "coins": 50 },
+      "turns": 3, "weight": 12, "cooldownTurns": 4,
+      "offerWhen": { "type": "enemyAhead", "min": 1, "max": 6 },
+      "objective": { "type": "count", "event": "TOKEN_CAPTURED", "where": { "player": "self" }, "target": 1 }
+    },
+    {
+      "id": "finish_in_5",
+      "title": "Homecoming",
+      "description": "Get a token home within {turns} turns",
+      "reward": { "coins": 40 },
+      "turns": 5, "weight": 10, "cooldownTurns": 5,
+      "offerWhen": { "type": "tokenProgressAtLeast", "value": 44 },
+      "objective": { "type": "count", "event": "TOKEN_FINISHED", "where": { "player": "self" }, "target": 1 }
+    },
+    {
+      "id": "double_capture_6",
+      "title": "Rampage",
+      "description": "Capture {target} enemy tokens within {turns} turns ({progress}/{target})",
+      "reward": { "coins": 100 },
+      "turns": 6, "weight": 5, "cooldownTurns": 8,
+      "offerWhen": { "type": "all", "of": [
+        { "type": "tokenCount", "zone": "track", "who": "enemy", "op": "gte", "value": 2 },
+        { "type": "tokenCount", "zone": "outOfYard", "who": "self", "op": "gte", "value": 1 }
+      ] },
+      "objective": { "type": "count", "event": "TOKEN_CAPTURED", "where": { "player": "self" }, "target": 2 }
+    },
+    {
+      "id": "move_25_in_3",
+      "title": "Sprinter",
+      "description": "Move {target} cells within {turns} turns ({progress}/{target})",
+      "reward": { "coins": 30 },
+      "turns": 3, "weight": 8, "cooldownTurns": 4,
+      "offerWhen": { "type": "tokenCount", "zone": "outOfYard", "who": "self", "op": "gte", "value": 1 },
+      "objective": { "type": "sum", "event": "TOKEN_MOVED", "where": { "player": "self" }, "field": "steps", "target": 25 }
+    },
+    {
+      "id": "survive_4",
+      "title": "Untouchable",
+      "description": "Don't get captured for {turns} turns",
+      "reward": { "coins": 40 },
+      "turns": 4, "weight": 8, "cooldownTurns": 5,
+      "offerWhen": { "type": "enemyBehind", "min": 1, "max": 6 },
+      "objective": { "type": "avoid", "event": "TOKEN_CAPTURED", "where": { "victimPlayer": "self" } }
+    },
+    {
+      "id": "six_streak_2",
+      "title": "Hot Hand",
+      "description": "Roll a 6 in {target} turns in a row",
+      "reward": { "coins": 60 },
+      "turns": 2, "weight": 6, "cooldownTurns": 6,
+      "offerWhen": { "type": "always" },
+      "objective": { "type": "streak", "event": "DICE_ROLLED", "where": { "player": "self", "value": 6 }, "target": 2 }
+    },
+    {
+      "id": "three_out_4",
+      "title": "Full Deploy",
+      "description": "Have 3 tokens out of your yard within {turns} turns",
+      "reward": { "coins": 35 },
+      "turns": 4, "weight": 8, "cooldownTurns": 6,
+      "offerWhen": { "type": "tokenCount", "zone": "outOfYard", "who": "self", "op": "lte", "value": 2 },
+      "objective": { "type": "state", "cond": { "type": "tokenCount", "zone": "outOfYard", "who": "self", "op": "gte", "value": 3 } }
+    },
+    {
+      "id": "strike_now",
+      "_note": "Offered right after a roll that can capture.",
+      "title": "Strike Now!",
+      "description": "Capture with this roll",
+      "reward": { "coins": 30 },
+      "turns": 1, "weight": 10, "cooldownTurns": 3,
+      "moments": ["afterRoll"],
+      "offerWhen": { "type": "canCaptureNow" },
+      "objective": { "type": "count", "event": "TOKEN_CAPTURED", "where": { "player": "self" }, "target": 1 }
+    }
+  ]
+}
