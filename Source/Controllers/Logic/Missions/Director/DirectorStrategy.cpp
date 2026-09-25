@@ -58,7 +58,7 @@ std::optional<size_t> DirectorStrategy::choose(const std::vector<CompiledMission
 		double temp = std::max(1e-3, m_cfg.utility.temperature);
 		double total = 0;
 		for (size_t i = 0; i < candidates.size(); i++) {
-			if (m_lastEvals[i].utility > 0) {
+			if (m_lastEvals[i].utility >= m_cfg.utility.minUtility) {  // weak candidates never sampled
 				weights[i] = std::pow(m_lastEvals[i].utility / best, 1.0 / temp);  // normalised to avoid overflow
 				total += weights[i];
 			}

@@ -11,6 +11,8 @@
 #include "Views/Game/DebugOverlayView.h"
 #include "Views/Game/PlayerPanelView.h"
 #include "Views/Game/ResultPopup.h"
+#include "Views/Common/ToastView.h"
+#include "Views/Missions/MissionHudView.h"
 
 namespace lm {
 
@@ -55,11 +57,13 @@ bool GameScene::init() {
 		addChild(panel, 6);
 	}
 
-	// Mission HUD area (MissionHudView is added in P7)
-	auto* hudNode = ax::Node::create();
-	hudNode->setName("missionHud");
-	hudNode->setPosition(0, ui::topY(ui::HUD_FROM_TOP));
-	addChild(hudNode, 15);
+	// Mission plug-in UI: toasts over the board, HUD cards under the top bar
+	auto* toasts = ax::utils::createInstance<ToastView>();
+	toasts->setPosition(cx, boardY + 150);
+	addChild(toasts, 150);
+	auto* hud = MissionHudView::create(toasts, [coins] { return coins->iconWorldPosition(); });
+	hud->setPosition(vo.x, ui::topY(ui::HUD_FROM_TOP));
+	addChild(hud, 15);
 
 #if defined(LM_DEV) && LM_DEV
 	auto* dbg = ax::utils::createInstance<DebugOverlayView>();

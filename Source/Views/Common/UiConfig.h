@@ -15,7 +15,7 @@ constexpr float BOARD_CENTER_Y = 610.f;
 
 // Top bar / mission HUD are anchored to the TOP of the visible area (offset from the top edge)
 constexpr float TOP_BAR_FROM_TOP = 45.f;
-constexpr float HUD_FROM_TOP = 170.f;
+constexpr float HUD_FROM_TOP = 165.f;
 constexpr float HUD_CARD_W = 224.f;
 constexpr float HUD_CARD_H = 120.f;
 constexpr float HUD_CARD_X[3] = {124.f, 360.f, 596.f};
