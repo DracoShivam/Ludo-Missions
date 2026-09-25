@@ -107,7 +107,7 @@ void GameScene::showResult() {
 	addChild(ResultPopup::create(d), 200);
 }
 
-void GameScene::afterEnter() {
+void GameScene::afterTransition() {
 	EventBus::publish(UiGameSceneReady{});
 }
 

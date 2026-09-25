@@ -21,13 +21,6 @@ void SceneController::init() {
 }
 
 void SceneController::runLobby() {
-#if defined(LM_DEV) && LM_DEV
-	const char* ap = std::getenv("LM_AUTOPLAY");
-	if (ap && ap[0] == '1') {
-		ax::Director::getInstance()->runWithScene(ax::utils::createInstance<GameScene>());
-		return;
-	}
-#endif
 	ax::Director::getInstance()->runWithScene(ax::utils::createInstance<LobbyScene>());
 }
 

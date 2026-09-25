@@ -9,7 +9,7 @@ public:
 	bool init() override;
 
 protected:
-	void afterEnter() override;
+	void afterTransition() override;
 };
 
 }  // namespace lm

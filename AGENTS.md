@@ -29,7 +29,8 @@ scripts/run_mac.sh        # build + run with logs in terminal
 - Game code never references missions. Missions listen to game events (`missions.enabled=false` must still play).
 - `EventBus::subscribe<T>(this, ...)` needs the explicit `<T>`; unsubscribe with `EventBus::unsubscribeAll(this)`
   (BaseView/BaseScene do it in `onExit`). Never keep event payload pointers. Fixed priority is 1, never 0.
-- Publish "ready" events only from `afterEnter()`, never from constructors or `init()`.
+- Scenes publish "ready" events only from `afterTransition()` (onEnterTransitionDidFinish): axmol disables ALL event
+  dispatch during scene transitions, so events published in `onEnter` are silently dropped. Never publish from ctor/`init()`.
 - Never switch the renderer to Metal (`AX_USE_COMPAT_GL ON` is required). Keep `AX_ENABLE_3D` and `AX_ENABLE_PHYSICS` ON.
 - DrawNode in this fork takes `Color4B`.
 - Scheduler one-shots: `unschedule(key, this)` before `schedule(...)`, guard callbacks with a match id.

@@ -13,7 +13,7 @@ public:
 
 protected:
 	void initListeners() override;
-	void afterEnter() override;
+	void afterTransition() override;
 	void beforeExit() override;
 
 private:

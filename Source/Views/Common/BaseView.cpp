@@ -22,6 +22,11 @@ void BaseScene::onEnter() {
 	afterEnter();
 }
 
+void BaseScene::onEnterTransitionDidFinish() {
+	Scene::onEnterTransitionDidFinish();
+	afterTransition();
+}
+
 void BaseScene::onExit() {
 	EventBus::unsubscribeAll(this);
 	beforeExit();

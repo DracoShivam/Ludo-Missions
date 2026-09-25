@@ -1,5 +1,7 @@
 #include "Views/Lobby/LobbyScene.h"
 
+#include <cstdlib>
+
 #include "Events/DebugEvents.h"
 #include "Events/EventBus.h"
 #include "Events/UiEvents.h"
@@ -42,8 +44,14 @@ bool LobbyScene::init() {
 	return true;
 }
 
-void LobbyScene::afterEnter() {
+void LobbyScene::afterTransition() {
 	EventBus::publish(UiLobbyReady{});
+#if defined(LM_DEV) && LM_DEV
+	const char* ap = std::getenv("LM_AUTOPLAY");
+	if (ap && ap[0] == '1') {  // DEV soak: press Play through the real transition path
+		runAction(ax::Sequence::create(ax::DelayTime::create(1.0f), ax::CallFunc::create([] { EventBus::publish(UiPlayTapped{}); }), nullptr));
+	}
+#endif
 }
 
 }  // namespace lm
